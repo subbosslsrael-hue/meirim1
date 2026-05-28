@@ -34,8 +34,6 @@ export default function DistributionPage() {
     familyIds: [],
   })
 
-  if (distributions.loading) return <LoadingScreen message="טוען חלוקות…" />
-
   const dist =
     distributions.data.find((d) => d.id === selId) || distributions.data[0]
 
@@ -43,6 +41,8 @@ export default function DistributionPage() {
     if (!dist) return []
     return optimizeOrder(dist.stops || [])
   }, [dist])
+
+  if (distributions.loading) return <LoadingScreen message="טוען חלוקות…" />
 
   const origLen = dist ? routeLengthKm(dist.stops || []) : 0
   const optLen = routeLengthKm(ordered)
