@@ -37,7 +37,8 @@ function StopRow({
     }
   }
 
-  const isVolunteer = currentProfile?.role === 'volunteer'
+  const canClaim =
+    currentProfile?.role === 'volunteer' || currentProfile?.role === 'instructor'
 
   return (
     <div className="flex items-center gap-3 p-2.5 rounded-xl border border-stone-100 bg-stone-50/60">
@@ -66,7 +67,7 @@ function StopRow({
         )}
       </div>
 
-      {isVolunteer ? (
+      {canClaim ? (
         <button
           onClick={() => onClaim(stop)}
           disabled={stop.claimed_by && stop.claimed_by !== currentProfile.id}

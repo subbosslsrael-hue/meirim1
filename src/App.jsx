@@ -32,7 +32,7 @@ const ALL_TABS = [
 const TABS_BY_ROLE = {
   admin: ALL_TABS.map((t) => t.id),
   service: ALL_TABS.map((t) => t.id),
-  instructor: ['dashboard', 'activities', 'reports'],
+  instructor: ['dashboard', 'activities', 'distribution', 'reports'],
   volunteer: ['dashboard', 'activities', 'distribution'],
 }
 

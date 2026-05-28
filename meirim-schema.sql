@@ -241,7 +241,7 @@ CREATE POLICY "participants self cancel"
   ON activity_participants FOR DELETE TO authenticated
   USING (profile_id = auth.uid() OR current_user_role() = 'admin');
 
--- חלוקות: admin הכל; service של אותו סניף; volunteer קריאה
+-- חלוקות: admin הכל; service של אותו סניף; volunteer ומדריך קריאה
 CREATE POLICY "distributions admin all"
   ON distributions FOR ALL TO authenticated
   USING (current_user_role() = 'admin')
@@ -252,6 +252,9 @@ CREATE POLICY "distributions service same branch"
 CREATE POLICY "distributions volunteer read"
   ON distributions FOR SELECT TO authenticated
   USING (current_user_role() = 'volunteer');
+CREATE POLICY "distributions instructor read"
+  ON distributions FOR SELECT TO authenticated
+  USING (current_user_role() = 'instructor');
 
 -- יעדי חלוקה: דומה לחלוקות; מתנדב יכול לעדכן claimed_by/delivered/photo_url של עצמו
 CREATE POLICY "stops read all"
@@ -266,6 +269,10 @@ CREATE POLICY "stops admin/service manage"
 CREATE POLICY "stops volunteer claim"
   ON distribution_stops FOR UPDATE TO authenticated
   USING (current_user_role() = 'volunteer' AND (claimed_by IS NULL OR claimed_by = auth.uid()))
+  WITH CHECK (claimed_by = auth.uid() OR claimed_by IS NULL);
+CREATE POLICY "stops instructor claim"
+  ON distribution_stops FOR UPDATE TO authenticated
+  USING (current_user_role() = 'instructor' AND (claimed_by IS NULL OR claimed_by = auth.uid()))
   WITH CHECK (claimed_by = auth.uid() OR claimed_by IS NULL);
 
 -- דיווחים: כל אחד מדווח רק על עצמו; service של הסניף שלו רואה את שלו; admin הכל

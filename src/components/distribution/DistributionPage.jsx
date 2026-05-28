@@ -53,7 +53,7 @@ export default function DistributionPage() {
       <div className="space-y-4">
         <div className="text-center py-10">
           <p className="text-stone-400 mb-3">אין חלוקות מוגדרות.</p>
-          {profile?.role !== 'volunteer' && (
+          {(profile?.role === 'admin' || profile?.role === 'service') && (
             <button
               onClick={() => setNewOpen(true)}
               className="bg-amber-500 text-white px-4 py-2 rounded-xl font-semibold"
@@ -149,7 +149,7 @@ export default function DistributionPage() {
             </button>
           ))}
         </div>
-        {profile?.role !== 'volunteer' && (
+        {(profile?.role === 'admin' || profile?.role === 'service') && (
           <button
             onClick={() => setNewOpen(true)}
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-semibold shadow"
@@ -188,7 +188,7 @@ export default function DistributionPage() {
                 מפת חלוקה ומסלול מותאם (GIS אמיתי)
               </h3>
             </div>
-            {profile?.role !== 'volunteer' && (
+            {(profile?.role === 'admin' || profile?.role === 'service') && (
               <button
                 onClick={() => setEditFam(true)}
                 className="text-xs text-emerald-700 font-semibold hover:underline"
