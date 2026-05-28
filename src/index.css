@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    direction: rtl;
+  }
+  body {
+    margin: 0;
+    font-family: 'Assistant', system-ui, sans-serif;
+    background: #fff7ed26;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* התאמת Leaflet ל-RTL */
+  .leaflet-container {
+    direction: ltr;
+    font-family: 'Assistant', system-ui, sans-serif;
+  }
+  .leaflet-popup-content {
+    direction: rtl;
+    text-align: right;
+  }
+}

@@ -1,0 +1,211 @@
+import React, { useMemo, useState } from 'react'
+import { Star } from 'lucide-react'
+import Modal from '../shared/Modal'
+import Field, { inputCls } from '../shared/Field'
+import { PROJECTS } from '../../lib/constants'
+
+const skillTokens = (s) =>
+  String(s || '')
+    .split(/[,،]/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+
+const matchScore = (instructor, required) => {
+  const req = skillTokens(required)
+  if (!req.length) return 0
+  const inst = skillTokens(instructor.skills)
+  return req.filter((r) => inst.some((x) => x.includes(r) || r.includes(x))).length
+}
+
+export default function ActivityForm({
+  onClose,
+  onSave,
+  branches,
+  instructors,
+  defaultBranchId,
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    project: PROJECTS[0],
+    activity_date: '',
+    branch_id: defaultBranchId || branches[0]?.id || '',
+    status: 'planning',
+    required_skills: '',
+    participants: 0,
+    cost: 0,
+    instructorIds: [],
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const ranked = useMemo(
+    () =>
+      [...instructors]
+        .map((i) => ({ ...i, score: matchScore(i, form.required_skills) }))
+        .sort((a, b) => b.score - a.score),
+    [instructors, form.required_skills],
+  )
+
+  const submit = async () => {
+    if (!form.name.trim()) {
+      setError('יש להזין שם פעילות')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await onSave({
+        ...form,
+        participants: Number(form.participants) || 0,
+        cost: Number(form.cost) || 0,
+      })
+      onClose()
+    } catch (err) {
+      setError(err.message || 'שגיאה בשמירה')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="הוספת פעילות חדשה" onClose={onClose}>
+      <Field label="שם הפעילות">
+        <input
+          className={inputCls}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="פרויקט (קטגוריה)">
+          <select
+            className={inputCls}
+            value={form.project}
+            onChange={(e) => setForm({ ...form, project: e.target.value })}
+          >
+            {PROJECTS.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="תאריך">
+          <input
+            type="date"
+            className={inputCls}
+            value={form.activity_date}
+            onChange={(e) => setForm({ ...form, activity_date: e.target.value })}
+          />
+        </Field>
+      </div>
+      <Field label="סניף">
+        <select
+          className={inputCls}
+          value={form.branch_id}
+          onChange={(e) => setForm({ ...form, branch_id: e.target.value })}
+        >
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="מיומנויות נדרשות (מופרדות בפסיק)">
+        <input
+          className={inputCls}
+          value={form.required_skills}
+          onChange={(e) => setForm({ ...form, required_skills: e.target.value })}
+          placeholder="לדוגמה: מוגבלויות, ילדים"
+        />
+      </Field>
+      <Field label="שיבוץ מדריכים — ממוינים לפי התאמת מיומנויות">
+        <div className="space-y-1.5">
+          {ranked.length === 0 && (
+            <p className="text-xs text-stone-400 px-2 py-3">
+              אין מדריכים רשומים. ניתן לרשום מדריכים בעת ההצטרפות למערכת.
+            </p>
+          )}
+          {ranked.map((i) => {
+            const on = form.instructorIds.includes(i.id)
+            const rec = i.score > 0
+            return (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    instructorIds: on
+                      ? f.instructorIds.filter((x) => x !== i.id)
+                      : [...f.instructorIds, i.id],
+                  }))
+                }
+                className={`w-full flex items-center justify-between text-right px-3 py-2 rounded-xl border ${
+                  on ? 'bg-emerald-600 border-emerald-600' : 'bg-stone-50 border-stone-200'
+                }`}
+              >
+                <span>
+                  <span
+                    className={`font-semibold text-sm ${on ? 'text-white' : 'text-stone-700'}`}
+                  >
+                    {i.name}
+                  </span>
+                  <span
+                    className={`block text-[11px] ${on ? 'text-emerald-100' : 'text-stone-400'}`}
+                  >
+                    {i.skills || '—'}
+                  </span>
+                </span>
+                {rec && (
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                      on ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    <Star size={10} className="fill-current" />
+                    מומלץ
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] text-stone-400 mt-1">
+          ההמלצה מבוססת על התאמת מיומנויות המדריך לדרישות הפעילות.
+        </p>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="מס׳ משתתפים">
+          <input
+            type="number"
+            className={inputCls}
+            value={form.participants}
+            onChange={(e) => setForm({ ...form, participants: e.target.value })}
+          />
+        </Field>
+        <Field label="עלות (₪)">
+          <input
+            type="number"
+            className={inputCls}
+            value={form.cost}
+            onChange={(e) => setForm({ ...form, cost: e.target.value })}
+          />
+        </Field>
+      </div>
+
+      {error && (
+        <div className="text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl text-sm mb-2">
+          {error}
+        </div>
+      )}
+
+      <button
+        onClick={submit}
+        disabled={busy}
+        className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold mt-2"
+      >
+        {busy ? 'שומר…' : 'שמירה'}
+      </button>
+    </Modal>
+  )
+}
