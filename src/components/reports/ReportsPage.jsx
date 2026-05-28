@@ -49,6 +49,16 @@ export default function ReportsPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
+  const byProfile = useMemo(() => {
+    const m = {}
+    reports.data.forEach(
+      (r) => (m[r.profile_id] = (m[r.profile_id] || 0) + Number(r.hours || 0)),
+    )
+    return profiles
+      .filter((p) => p.role === 'service' || p.role === 'instructor')
+      .map((p) => ({ name: p.name, שעות: m[p.id] || 0 }))
+  }, [reports.data, profiles])
+
   if (reports.loading) return <LoadingScreen message="טוען דיווחים…" />
 
   const submit = async () => {
@@ -74,16 +84,6 @@ export default function ReportsPage() {
       setBusy(false)
     }
   }
-
-  const byProfile = useMemo(() => {
-    const m = {}
-    reports.data.forEach(
-      (r) => (m[r.profile_id] = (m[r.profile_id] || 0) + Number(r.hours || 0)),
-    )
-    return profiles
-      .filter((p) => p.role === 'service' || p.role === 'instructor')
-      .map((p) => ({ name: p.name, שעות: m[p.id] || 0 }))
-  }, [reports.data, profiles])
 
   return (
     <div className="space-y-4">
