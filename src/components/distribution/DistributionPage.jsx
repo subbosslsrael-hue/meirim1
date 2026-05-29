@@ -79,6 +79,49 @@ export default function DistributionPage() {
 
   const delivered = (dist.stops || []).filter((s) => s.delivered).length
 
+  const canClaimRole =
+    profile?.role === 'volunteer' || profile?.role === 'instructor'
+
+  const myStops = (dist.stops || []).filter(
+    (s) =>
+      s.claimed_by === profile?.id &&
+      !s.delivered &&
+      s.family?.lat != null &&
+      s.family?.lng != null,
+  )
+
+  const navigateMyRoute = () => {
+    if (!myStops.length) return
+    const openWaze = (lat, lng) =>
+      window.open(
+        `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,
+        '_blank',
+        'noopener,noreferrer',
+      )
+    if (myStops.length === 1 || !navigator.geolocation) {
+      openWaze(myStops[0].family.lat, myStops[0].family.lng)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const me = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        let nearest = myStops[0]
+        let bestDist = Infinity
+        myStops.forEach((s) => {
+          const d =
+            (s.family.lat - me.lat) ** 2 + (s.family.lng - me.lng) ** 2
+          if (d < bestDist) {
+            bestDist = d
+            nearest = s
+          }
+        })
+        openWaze(nearest.family.lat, nearest.family.lng)
+      },
+      () => openWaze(myStops[0].family.lat, myStops[0].family.lng),
+      { enableHighAccuracy: false, timeout: 5000 },
+    )
+  }
+
   const claimStop = async (stop) => {
     const next = stop.claimed_by === profile.id ? null : profile.id
     const { error } = await supabase
@@ -166,7 +209,7 @@ export default function DistributionPage() {
             {dist.dist_date} · {dist.items}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
             <Navigation size={13} />
             מסלול מותאם
@@ -176,6 +219,16 @@ export default function DistributionPage() {
           <span className="text-sm font-bold text-emerald-700">
             {delivered}/{(dist.stops || []).length} נמסרו
           </span>
+          {canClaimRole && myStops.length > 0 && (
+            <button
+              onClick={navigateMyRoute}
+              className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white px-3 py-1.5 rounded-xl font-semibold text-sm shadow"
+              title="ניווט ב-Waze ליעד הקרוב ביותר מבין היעדים שלקחת"
+            >
+              <Navigation size={15} />
+              ניווט מסלול שלי ({myStops.length})
+            </button>
+          )}
         </div>
       </Card>
 

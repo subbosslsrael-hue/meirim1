@@ -5,6 +5,7 @@ import {
   Circle,
   HandHeart,
   Image as ImageIcon,
+  Navigation,
 } from 'lucide-react'
 import { uploadDoorPhoto } from '../../lib/storage'
 
@@ -68,23 +69,40 @@ function StopRow({
       </div>
 
       {canClaim ? (
-        <button
-          onClick={() => onClaim(stop)}
-          disabled={stop.claimed_by && stop.claimed_by !== currentProfile.id}
-          className={`text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0 ${
-            stop.claimed_by === currentProfile.id
-              ? 'bg-emerald-600 text-white'
+        <div className="flex items-center gap-1.5 shrink-0">
+          {stop.claimed_by === currentProfile.id &&
+            !stop.delivered &&
+            f.lat != null &&
+            f.lng != null && (
+              <a
+                href={`https://waze.com/ul?ll=${f.lat},${f.lng}&navigate=yes`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="ניווט ב-Waze"
+                className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-sky-500 text-white hover:bg-sky-600"
+              >
+                <Navigation size={14} />
+                Waze
+              </a>
+            )}
+          <button
+            onClick={() => onClaim(stop)}
+            disabled={stop.claimed_by && stop.claimed_by !== currentProfile.id}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+              stop.claimed_by === currentProfile.id
+                ? 'bg-emerald-600 text-white'
+                : stop.claimed_by
+                  ? 'bg-stone-100 text-stone-400'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+            }`}
+          >
+            {stop.claimed_by === currentProfile.id
+              ? '✓ אני לוקח'
               : stop.claimed_by
-                ? 'bg-stone-100 text-stone-400'
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-          }`}
-        >
-          {stop.claimed_by === currentProfile.id
-            ? '✓ אני לוקח'
-            : stop.claimed_by
-              ? 'תפוס'
-              : 'אני אקח'}
-        </button>
+                ? 'תפוס'
+                : 'אני אקח'}
+          </button>
+        </div>
       ) : (
         <>
           <button
