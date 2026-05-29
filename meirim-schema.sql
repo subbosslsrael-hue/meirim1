@@ -158,6 +158,16 @@ RETURNS UUID LANGUAGE SQL SECURITY DEFINER STABLE AS $$
   SELECT branch_id FROM profiles WHERE id = auth.uid()
 $$;
 
+-- שימושית למתנדבים/מדריכים: האם המשפחה מופיעה באיזושהי חלוקה.
+-- SECURITY DEFINER עוקפת RLS על distribution_stops כדי למנוע רקורסיה
+-- בין הפוליסיות של families ו-distribution_stops.
+CREATE OR REPLACE FUNCTION family_in_any_distribution(fid UUID)
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM distribution_stops WHERE family_id = fid
+  )
+$$;
+
 -- ============================================================
 -- Row Level Security – מדיניות הרשאות
 -- כאן מוגדר מי רואה ועושה מה. זה הלב של מערכת ההרשאות.
@@ -194,7 +204,8 @@ CREATE POLICY "profiles insert by admin or self"
   ON profiles FOR INSERT TO authenticated
   WITH CHECK (id = auth.uid() OR current_user_role() = 'admin');
 
--- משפחות: admin הכל; service לסניף שלו; volunteer ללא גישה
+-- משפחות: admin הכל; service לסניף שלו;
+-- volunteer/instructor רואים רק משפחות שמופיעות בחלוקות (קריאה בלבד)
 CREATE POLICY "families admin all"
   ON families FOR ALL TO authenticated
   USING (current_user_role() = 'admin')
@@ -203,6 +214,12 @@ CREATE POLICY "families service same branch"
   ON families FOR ALL TO authenticated
   USING (current_user_role() = 'service' AND branch_id = current_user_branch())
   WITH CHECK (current_user_role() = 'service' AND branch_id = current_user_branch());
+CREATE POLICY "families read for distribution claimers"
+  ON families FOR SELECT TO authenticated
+  USING (
+    (current_user_role() = 'volunteer' OR current_user_role() = 'instructor')
+    AND family_in_any_distribution(id)
+  );
 
 -- פעילויות: admin הכל; service לסניף שלו; volunteer קריאה בלבד
 CREATE POLICY "activities admin all"
