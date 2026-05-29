@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Package, ChevronDown, ChevronUp, Camera as CameraIcon } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -21,6 +21,7 @@ import { useReports } from '../../hooks/useReports'
 import { useProfiles } from '../../hooks/useProfiles'
 import { useFamilies } from '../../hooks/useFamilies'
 import { useActivities } from '../../hooks/useActivities'
+import { useDistributionArchives } from '../../hooks/useDistributionArchives'
 
 function currentWeek() {
   const d = new Date()
@@ -38,8 +39,12 @@ export default function ReportsPage() {
   const { data: profiles } = useProfiles()
   const { data: families } = useFamilies()
   const { data: activities } = useActivities()
+  const canViewArchives =
+    profile?.role === 'admin' || profile?.role === 'service'
+  const { data: archives } = useDistributionArchives({ enabled: canViewArchives })
 
   const [open, setOpen] = useState(false)
+  const [expandedArchive, setExpandedArchive] = useState(null)
   const [form, setForm] = useState({
     week: currentWeek(),
     project: PROJECTS[0],
@@ -103,6 +108,102 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+
+      {canViewArchives && archives.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Package size={16} className="text-emerald-600" />
+            <h4 className="font-bold text-stone-800 text-sm">
+              סיכומי חלוקות שהושלמו ({archives.length})
+            </h4>
+            <span className="text-xs text-stone-400">· נשמר עד שנה</span>
+          </div>
+          <div className="space-y-2">
+            {archives.map((a) => {
+              const isOpen = expandedArchive === a.id
+              const stops = a.summary?.stops || []
+              return (
+                <div
+                  key={a.id}
+                  className="border border-stone-100 rounded-xl overflow-hidden bg-stone-50/40"
+                >
+                  <button
+                    onClick={() =>
+                      setExpandedArchive(isOpen ? null : a.id)
+                    }
+                    className="w-full flex items-center justify-between gap-2 p-3 text-right hover:bg-stone-50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-stone-800 text-sm truncate">
+                        {a.name}
+                      </div>
+                      <div className="text-xs text-stone-500">
+                        {a.dist_date || '—'}
+                        {a.branch?.name ? ` · ${a.branch.name}` : ''}
+                        {' · '}
+                        הושלם{' '}
+                        {new Date(a.archived_at).toLocaleDateString('he-IL')}
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700 shrink-0">
+                      {a.delivered_count}/{a.total_stops} נמסרו
+                    </span>
+                    {isOpen ? (
+                      <ChevronUp size={16} className="text-stone-400" />
+                    ) : (
+                      <ChevronDown size={16} className="text-stone-400" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-stone-100 p-3 space-y-1.5 bg-white">
+                      {stops.map((s, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                            {i + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-stone-700 truncate">
+                              {s.family_name || '—'}
+                            </div>
+                            <div className="text-[10px] text-stone-500 truncate">
+                              {s.family_city}
+                              {s.family_address ? `, ${s.family_address}` : ''}
+                              {s.claimed_by_name
+                                ? ` · ע״י ${s.claimed_by_name}`
+                                : ''}
+                            </div>
+                          </div>
+                          {s.photo_url && (
+                            <a
+                              href={s.photo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-600"
+                              title="תמונת מסירה"
+                            >
+                              <CameraIcon size={14} />
+                            </a>
+                          )}
+                          <span className="text-[10px] text-stone-400 shrink-0">
+                            {s.delivered_at
+                              ? new Date(s.delivered_at).toLocaleDateString(
+                                  'he-IL',
+                                )
+                              : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       <ComplianceTracker reports={reports.data} profiles={profiles} />
 

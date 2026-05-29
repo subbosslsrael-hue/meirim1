@@ -102,6 +102,22 @@ CREATE TABLE distribution_stops (
   UNIQUE (distribution_id, family_id)
 );
 
+-- 9.5 ארכיון חלוקות שהושלמו (אוטומטי דרך trigger; נשמר עד שנה)
+CREATE TABLE distribution_archives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  dist_date DATE,
+  items TEXT,
+  branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+  total_stops INT NOT NULL DEFAULT 0,
+  delivered_count INT NOT NULL DEFAULT 0,
+  summary JSONB NOT NULL,
+  archived_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 year'
+);
+CREATE INDEX idx_archives_expires ON distribution_archives(expires_at);
+CREATE INDEX idx_archives_branch ON distribution_archives(branch_id);
+
 -- 10. דיווחי פעילות שבועיים
 CREATE TABLE activity_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,6 +185,72 @@ RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE AS $$
 $$;
 
 -- ============================================================
+-- אוטומציה: כשכל יעדי החלוקה סומנו "נמסר" — לארכב ולמחוק
+-- ============================================================
+CREATE OR REPLACE FUNCTION archive_completed_distribution()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  dist_id UUID;
+  total INT;
+  delivered_count INT;
+  dist_record RECORD;
+  summary_data JSONB;
+BEGIN
+  dist_id := NEW.distribution_id;
+
+  -- נעילת השורה למניעת מירוץ בין transactions מקבילים
+  SELECT * INTO dist_record FROM distributions WHERE id = dist_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT COUNT(*), COUNT(*) FILTER (WHERE delivered)
+    INTO total, delivered_count
+    FROM distribution_stops
+    WHERE distribution_id = dist_id;
+
+  IF total = 0 OR delivered_count < total THEN
+    RETURN NEW;
+  END IF;
+
+  -- בניית JSON הסיכום (לפי סדר זמן מסירה)
+  SELECT jsonb_build_object(
+    'stops', jsonb_agg(
+      jsonb_build_object(
+        'family_name', f.name,
+        'family_city', f.city,
+        'family_address', f.address,
+        'delivered_at', s.delivered_at,
+        'claimed_by_name', p.name,
+        'photo_url', s.photo_url
+      ) ORDER BY s.delivered_at
+    )
+  ) INTO summary_data
+  FROM distribution_stops s
+  LEFT JOIN families f ON f.id = s.family_id
+  LEFT JOIN profiles p ON p.id = s.claimed_by
+  WHERE s.distribution_id = dist_id;
+
+  INSERT INTO distribution_archives(
+    name, dist_date, items, branch_id, total_stops, delivered_count, summary
+  ) VALUES (
+    dist_record.name, dist_record.dist_date, dist_record.items,
+    dist_record.branch_id, total, delivered_count, summary_data
+  );
+
+  DELETE FROM distributions WHERE id = dist_id;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER archive_on_stop_update
+  AFTER UPDATE ON distribution_stops
+  FOR EACH ROW
+  WHEN (NEW.delivered IS DISTINCT FROM OLD.delivered AND NEW.delivered = TRUE)
+  EXECUTE FUNCTION archive_completed_distribution();
+
+-- ============================================================
 -- Row Level Security – מדיניות הרשאות
 -- כאן מוגדר מי רואה ועושה מה. זה הלב של מערכת ההרשאות.
 -- ============================================================
@@ -182,6 +264,7 @@ ALTER TABLE activity_instructors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE distributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE distribution_stops ENABLE ROW LEVEL SECURITY;
+ALTER TABLE distribution_archives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_reports ENABLE ROW LEVEL SECURITY;
 
 -- סניפים: כולם רואים, רק admin משנה
@@ -291,6 +374,18 @@ CREATE POLICY "stops instructor claim"
   ON distribution_stops FOR UPDATE TO authenticated
   USING (current_user_role() = 'instructor' AND (claimed_by IS NULL OR claimed_by = auth.uid()))
   WITH CHECK (claimed_by = auth.uid() OR claimed_by IS NULL);
+
+-- ארכיון חלוקות: admin הכל; service קריאה לסניף שלו
+CREATE POLICY "archives admin all"
+  ON distribution_archives FOR ALL TO authenticated
+  USING (current_user_role() = 'admin')
+  WITH CHECK (current_user_role() = 'admin');
+CREATE POLICY "archives service read same branch"
+  ON distribution_archives FOR SELECT TO authenticated
+  USING (
+    current_user_role() = 'service'
+    AND (branch_id IS NULL OR branch_id = current_user_branch())
+  );
 
 -- דיווחים: כל אחד מדווח רק על עצמו; service של הסניף שלו רואה את שלו; admin הכל
 CREATE POLICY "reports own"

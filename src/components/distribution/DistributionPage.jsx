@@ -6,6 +6,7 @@ import {
   Route,
   CheckCircle2,
   Circle,
+  Trash2,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import Modal from '../shared/Modal'
@@ -27,6 +28,8 @@ export default function DistributionPage() {
   const [selId, setSelId] = useState(null)
   const [newOpen, setNewOpen] = useState(false)
   const [editFam, setEditFam] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deletingDist, setDeletingDist] = useState(false)
   const [nform, setNform] = useState({
     name: '',
     dist_date: '',
@@ -157,6 +160,25 @@ export default function DistributionPage() {
     await distributions.mutate()
   }
 
+  const deleteDistribution = async () => {
+    if (!dist) return
+    setDeletingDist(true)
+    try {
+      const { error } = await supabase
+        .from('distributions')
+        .delete()
+        .eq('id', dist.id)
+      if (error) throw error
+      setSelId(null)
+      setConfirmDelete(false)
+      await distributions.mutate()
+    } catch (err) {
+      alert(err.message || 'שגיאה במחיקה')
+    } finally {
+      setDeletingDist(false)
+    }
+  }
+
   const toggleFamInDist = async (family) => {
     const existing = (dist.stops || []).find((s) => s.family_id === family.id)
     if (existing) {
@@ -229,6 +251,35 @@ export default function DistributionPage() {
               ניווט מסלול שלי ({myStops.length})
             </button>
           )}
+          {(profile?.role === 'admin' || profile?.role === 'service') &&
+            (confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-rose-700">למחוק?</span>
+                <button
+                  onClick={deleteDistribution}
+                  disabled={deletingDist}
+                  className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-semibold text-sm"
+                >
+                  {deletingDist ? '…' : 'כן, מחק'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deletingDist}
+                  className="text-xs text-stone-500 hover:text-stone-700 px-2"
+                >
+                  ביטול
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-xl font-semibold text-sm"
+                title="מחיקת החלוקה ללא ארכוב"
+              >
+                <Trash2 size={15} />
+                מחק חלוקה
+              </button>
+            ))}
         </div>
       </Card>
 
