@@ -79,8 +79,7 @@ export default function DistributionPage() {
 
   const delivered = (dist.stops || []).filter((s) => s.delivered).length
 
-  const canClaimRole =
-    profile?.role === 'volunteer' || profile?.role === 'instructor'
+  const canClaimRole = !!profile?.id
 
   const myStops = (dist.stops || []).filter(
     (s) =>
@@ -148,12 +147,13 @@ export default function DistributionPage() {
       .update({ photo_url: url })
       .eq('id', stopId)
     if (e1) throw e1
-    // נשמור גם על כרטיס המשפחה כדי שתופיע בחלוקה הבאה
+    // נסה לשמור גם על כרטיס המשפחה לחלוקות עתידיות.
+    // מתנדב/מדריך אין להם UPDATE על families — נתעלם משגיאה כאן.
     const { error: e2 } = await supabase
       .from('families')
       .update({ door_photo_url: url })
       .eq('id', familyId)
-    if (e2) throw e2
+    if (e2) console.warn('לא ניתן לעדכן תמונת דלת בכרטיס המשפחה:', e2.message)
     await distributions.mutate()
   }
 
