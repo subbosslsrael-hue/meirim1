@@ -8,6 +8,7 @@ import {
   Circle,
   Trash2,
   Pencil,
+  Archive,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import Modal from '../shared/Modal'
@@ -31,6 +32,8 @@ export default function DistributionPage() {
   const [editFam, setEditFam] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deletingDist, setDeletingDist] = useState(false)
+  const [showArchivePrompt, setShowArchivePrompt] = useState(false)
+  const [archiving, setArchiving] = useState(false)
   const [nform, setNform] = useState({
     name: '',
     dist_date: '',
@@ -136,13 +139,25 @@ export default function DistributionPage() {
   }
 
   const markDelivered = async (stop) => {
-    const now = stop.delivered ? null : new Date().toISOString()
+    const willBeDelivered = !stop.delivered
+    const now = willBeDelivered ? new Date().toISOString() : null
     const { error } = await supabase
       .from('distribution_stops')
-      .update({ delivered: !stop.delivered, delivered_at: now })
+      .update({ delivered: willBeDelivered, delivered_at: now })
       .eq('id', stop.id)
     if (error) throw error
     await distributions.mutate()
+
+    // כשהסימון הזה משלים את כל החלוקה — נציע למנהל/שירות לארכב.
+    const isAdminOrService =
+      profile?.role === 'admin' || profile?.role === 'service'
+    if (willBeDelivered && isAdminOrService) {
+      const stops = dist.stops || []
+      const allDelivered =
+        stops.length > 0 &&
+        stops.every((s) => (s.id === stop.id ? true : s.delivered))
+      if (allDelivered) setShowArchivePrompt(true)
+    }
   }
 
   const photoUploaded = async (stopId, familyId, path) => {
@@ -178,6 +193,25 @@ export default function DistributionPage() {
       alert(err.message || 'שגיאה במחיקה')
     } finally {
       setDeletingDist(false)
+    }
+  }
+
+  const archiveDistribution = async () => {
+    if (!dist) return
+    setArchiving(true)
+    try {
+      const { error } = await supabase.rpc('archive_distribution', {
+        p_dist_id: dist.id,
+      })
+      if (error) throw error
+      setShowArchivePrompt(false)
+      setEditFam(false)
+      setSelId(null)
+      await distributions.mutate()
+    } catch (err) {
+      alert(err.message || 'שגיאה בארכוב החלוקה')
+    } finally {
+      setArchiving(false)
     }
   }
 
@@ -361,6 +395,20 @@ export default function DistributionPage() {
             סיום
           </button>
 
+          {(dist.stops || []).length > 0 &&
+            delivered === (dist.stops || []).length && (
+              <div className="mt-4 pt-4 border-t border-stone-200">
+                <p className="text-xs text-stone-400 mb-2">החלוקה הושלמה</p>
+                <button
+                  onClick={archiveDistribution}
+                  disabled={archiving}
+                  className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2 rounded-lg font-semibold text-sm"
+                >
+                  <Archive size={15} /> ארכב חלוקה (העבר לסיכומים)
+                </button>
+              </div>
+            )}
+
           <div className="mt-4 pt-4 border-t border-stone-200">
             <p className="text-xs text-stone-400 mb-2">מחיקת החלוקה</p>
             {confirmDelete ? (
@@ -393,6 +441,43 @@ export default function DistributionPage() {
                 מחק חלוקה
               </button>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {showArchivePrompt && (
+        <Modal
+          title="החלוקה הושלמה 🎉"
+          onClose={() => setShowArchivePrompt(false)}
+        >
+          <p className="text-sm text-stone-600 mb-1">
+            כל המשפחות ב{dist.name} סומנו כנמסרו.
+          </p>
+          <p className="text-sm text-stone-600 mb-4">
+            לארכב את החלוקה? היא תועבר ל״סיכומי חלוקות״ בדוחות (כולל התמונות
+            והנתונים) ותוסר מהרשימה הפעילה.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={archiveDistribution}
+              disabled={archiving}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold"
+            >
+              {archiving ? (
+                '…'
+              ) : (
+                <>
+                  <Archive size={16} /> ארכב חלוקה
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowArchivePrompt(false)}
+              disabled={archiving}
+              className="px-4 bg-stone-100 hover:bg-stone-200 text-stone-600 py-2.5 rounded-xl font-semibold"
+            >
+              לא עכשיו
+            </button>
           </div>
         </Modal>
       )}
