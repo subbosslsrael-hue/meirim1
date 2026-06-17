@@ -104,7 +104,7 @@ function StopRow({
         )}
         <button
           onClick={() => onClaim(stop)}
-          disabled={stop.claimed_by && !claimedByMe && !isAdminOrService}
+          disabled={stop.claimed_by && !claimedByMe}
           className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
             claimedByMe
               ? 'bg-emerald-600 text-white'
@@ -151,8 +151,8 @@ function StopRow({
         />
         <button
           onClick={() => onMarkDelivered(stop)}
-          disabled={!canModify}
-          title={canModify ? '' : 'יש לתפוס את היעד תחילה'}
+          disabled={!claimedByMe}
+          title={claimedByMe ? '' : 'רק מי שלקח את היעד יכול לסמן שנמסר'}
           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${
             stop.delivered
               ? 'bg-emerald-600 text-white'
