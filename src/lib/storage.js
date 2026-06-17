@@ -5,21 +5,60 @@ const BUCKET = 'door-photos'
 const SIGNED_TTL = 60 * 60
 
 /**
+ * מכווץ תמונה בצד הלקוח לפני העלאה: מקטין לרוחב/גובה מקסימלי ושומר כ-JPEG.
+ * מחזיר Blob מכווץ, או את הקובץ המקורי אם הכיווץ נכשל / לא הקטין.
+ */
+async function compressImage(file, { maxDim = 1280, quality = 0.72 } = {}) {
+  if (!file.type?.startsWith('image/')) return file
+
+  let bitmap
+  try {
+    // imageOrientation מתקן סיבוב לפי EXIF (תמונות טלפון)
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    // הדפדפן לא יודע לפענח (למשל HEIC) — נעלה את המקור כמו שהוא
+    return file
+  }
+
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+  const w = Math.round(bitmap.width * scale)
+  const h = Math.round(bitmap.height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+  bitmap.close?.()
+
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', quality),
+  )
+  // אם משום מה הכיווץ לא הקטין — נשתמש במקור
+  if (!blob || blob.size >= file.size) return file
+  return blob
+}
+
+/**
  * מעלה קובץ ל-Storage תחת door-photos/{familyId}-{timestamp}.{ext}
- * מחזיר את ה*נתיב* של הקובץ (לא URL). הבאקט פרטי — צפייה נעשית
- * דרך קישור חתום (getDoorPhotoUrl).
+ * (מכווץ אותו קודם). מחזיר את ה*נתיב* של הקובץ (לא URL). הבאקט פרטי —
+ * צפייה נעשית דרך קישור חתום (getDoorPhotoUrl).
  */
 export async function uploadDoorPhoto({ familyId, file }) {
   if (!file) throw new Error('לא נבחר קובץ')
-  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase()
+
+  const upload = await compressImage(file)
+  const isJpeg = upload.type === 'image/jpeg'
+  const ext = isJpeg
+    ? 'jpg'
+    : (file.name?.split('.').pop() || 'jpg').toLowerCase()
   const path = `${familyId}-${Date.now()}.${ext}`
 
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, file, {
+    .upload(path, upload, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type || 'image/jpeg',
+      contentType: upload.type || 'image/jpeg',
     })
   if (error) throw error
 
