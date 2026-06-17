@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Circle,
   Trash2,
+  Pencil,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import Modal from '../shared/Modal'
@@ -171,6 +172,7 @@ export default function DistributionPage() {
       if (error) throw error
       setSelId(null)
       setConfirmDelete(false)
+      setEditFam(false)
       await distributions.mutate()
     } catch (err) {
       alert(err.message || 'שגיאה במחיקה')
@@ -251,55 +253,26 @@ export default function DistributionPage() {
               ניווט מסלול שלי ({myStops.length})
             </button>
           )}
-          {(profile?.role === 'admin' || profile?.role === 'service') &&
-            (confirmDelete ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-rose-700">למחוק?</span>
-                <button
-                  onClick={deleteDistribution}
-                  disabled={deletingDist}
-                  className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-semibold text-sm"
-                >
-                  {deletingDist ? '…' : 'כן, מחק'}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  disabled={deletingDist}
-                  className="text-xs text-stone-500 hover:text-stone-700 px-2"
-                >
-                  ביטול
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-xl font-semibold text-sm"
-                title="מחיקת החלוקה ללא ארכוב"
-              >
-                <Trash2 size={15} />
-                מחק חלוקה
-              </button>
-            ))}
+          {(profile?.role === 'admin' || profile?.role === 'service') && (
+            <button
+              onClick={() => setEditFam(true)}
+              className="flex items-center gap-1.5 bg-white hover:bg-stone-50 text-stone-600 border border-stone-200 px-3 py-1.5 rounded-xl font-semibold text-sm"
+              title="הוספה/הסרה של משפחות ומחיקת החלוקה"
+            >
+              <Pencil size={15} />
+              ערוך חלוקה
+            </button>
+          )}
         </div>
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-orange-500" />
-              <h3 className="font-bold text-stone-800 text-sm">
-                מפת חלוקה ומסלול מותאם (GIS אמיתי)
-              </h3>
-            </div>
-            {(profile?.role === 'admin' || profile?.role === 'service') && (
-              <button
-                onClick={() => setEditFam(true)}
-                className="text-xs text-emerald-700 font-semibold hover:underline"
-              >
-                ערוך משפחות
-              </button>
-            )}
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin size={16} className="text-orange-500" />
+            <h3 className="font-bold text-stone-800 text-sm">
+              מפת חלוקה ומסלול מותאם (GIS אמיתי)
+            </h3>
           </div>
           <DistributionMap orderedStops={ordered} />
           <div className="flex gap-4 mt-2 text-[11px] text-stone-500 flex-wrap">
@@ -344,7 +317,13 @@ export default function DistributionPage() {
       )}
 
       {editFam && (
-        <Modal title={`משפחות ב${dist.name}`} onClose={() => setEditFam(false)}>
+        <Modal
+          title={`עריכת חלוקה — ${dist.name}`}
+          onClose={() => {
+            setEditFam(false)
+            setConfirmDelete(false)
+          }}
+        >
           <p className="text-xs text-stone-500 mb-3">
             הוסף או הסר משפחות. המסלול יחושב מחדש אוטומטית.
           </p>
@@ -373,11 +352,48 @@ export default function DistributionPage() {
             })}
           </div>
           <button
-            onClick={() => setEditFam(false)}
+            onClick={() => {
+              setEditFam(false)
+              setConfirmDelete(false)
+            }}
             className="w-full bg-stone-800 text-white py-2.5 rounded-xl font-semibold mt-3"
           >
             סיום
           </button>
+
+          <div className="mt-4 pt-4 border-t border-stone-200">
+            <p className="text-xs text-stone-400 mb-2">מחיקת החלוקה</p>
+            {confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-rose-700 flex-1">
+                  למחוק את החלוקה לצמיתות?
+                </span>
+                <button
+                  onClick={deleteDistribution}
+                  disabled={deletingDist}
+                  className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-semibold text-sm"
+                >
+                  {deletingDist ? '…' : 'כן, מחק'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deletingDist}
+                  className="text-xs text-stone-500 hover:text-stone-700 px-2"
+                >
+                  ביטול
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-3 py-2 rounded-lg font-semibold text-sm"
+                title="מחיקת החלוקה ללא ארכוב"
+              >
+                <Trash2 size={15} />
+                מחק חלוקה
+              </button>
+            )}
+          </div>
         </Modal>
       )}
     </div>
