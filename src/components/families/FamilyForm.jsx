@@ -4,6 +4,18 @@ import Field, { inputCls } from '../shared/Field'
 import { CATEGORIES } from '../../lib/constants'
 import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
 
+// מנרמל מספר טלפון ישראלי: מסיר רווחים/מקפים וממיר קידומת בינ"ל ל-0.
+const normalizePhone = (raw) => {
+  let p = (raw || '').replace(/[\s\-()]/g, '')
+  if (p.startsWith('+972')) p = '0' + p.slice(4)
+  else if (p.startsWith('972')) p = '0' + p.slice(3)
+  return p
+}
+
+// בודק תקינות: נייד (05X), VoIP (07X) או קווי (02/03/04/08/09).
+const isValidIsraeliPhone = (raw) =>
+  /^0(5\d|7\d|[2-489])\d{7}$/.test(normalizePhone(raw))
+
 export default function FamilyForm({
   onClose,
   onSave,
@@ -11,15 +23,19 @@ export default function FamilyForm({
   profiles,
   defaultBranchId,
   defaultResponsibleId,
+  family,
 }) {
+  const isEdit = !!family
   const [form, setForm] = useState({
-    name: '',
-    branch_id: defaultBranchId || branches[0]?.id || '',
-    city: '',
-    address: '',
-    phone: '',
-    need_category: CATEGORIES[0],
-    responsible_profile_id: defaultResponsibleId || '',
+    name: family?.name || '',
+    branch_id: family?.branch_id || defaultBranchId || branches[0]?.id || '',
+    city: family?.city || '',
+    address: family?.address || '',
+    phone: family?.phone || '',
+    need_category: family?.need_category || CATEGORIES[0],
+    responsible_profile_id:
+      family?.responsible_profile_id || defaultResponsibleId || '',
+    notes: family?.notes || '',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -33,18 +49,36 @@ export default function FamilyForm({
       setError('יש להזין שם משפחה')
       return
     }
+    if (!form.phone.trim()) {
+      setError('יש להזין מספר טלפון')
+      return
+    }
+    if (!isValidIsraeliPhone(form.phone)) {
+      setError('מספר הטלפון אינו תקין (לדוגמה: 050-1234567)')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
       const branch = branches.find((b) => b.id === form.branch_id)
       const city = form.city || branch?.city || ''
-      let coords = await geocodeAddress({ city, address: form.address })
-      if (!coords) coords = fallbackForCity(city)
+      // גאוקוד מחדש רק אם הכתובת/עיר השתנו (או במשפחה חדשה)
+      let lat = family?.lat ?? null
+      let lng = family?.lng ?? null
+      const addressChanged =
+        !isEdit || city !== family.city || form.address !== family.address
+      if (addressChanged) {
+        let coords = await geocodeAddress({ city, address: form.address })
+        if (!coords) coords = fallbackForCity(city)
+        lat = coords?.lat ?? null
+        lng = coords?.lng ?? null
+      }
       await onSave({
         ...form,
         city,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        phone: normalizePhone(form.phone),
+        lat,
+        lng,
         responsible_profile_id: form.responsible_profile_id || null,
       })
       onClose()
@@ -56,7 +90,7 @@ export default function FamilyForm({
   }
 
   return (
-    <Modal title="הוספת משפחה נתמכת" onClose={onClose}>
+    <Modal title={isEdit ? 'עריכת משפחה' : 'הוספת משפחה נתמכת'} onClose={onClose}>
       <Field label="שם המשפחה">
         <input
           className={inputCls}
@@ -97,8 +131,10 @@ export default function FamilyForm({
       <Field label="טלפון">
         <input
           className={inputCls}
+          type="tel"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          placeholder="050-1234567"
         />
       </Field>
       <Field label="סוג הצורך">
@@ -127,6 +163,15 @@ export default function FamilyForm({
             </option>
           ))}
         </select>
+      </Field>
+      <Field label="הערות">
+        <textarea
+          className={inputCls}
+          rows={3}
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          placeholder="מידע נוסף על המשפחה (אופציונלי)"
+        />
       </Field>
 
       {error && (

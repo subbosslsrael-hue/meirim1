@@ -27,6 +27,7 @@ export default function FamiliesPage() {
   const [q, setQ] = useState('')
   const [openAdd, setOpenAdd] = useState(false)
   const [openSwap, setOpenSwap] = useState(false)
+  const [editFamily, setEditFamily] = useState(null)
   const [toast, setToast] = useState(null)
 
   if (families.loading) return <LoadingScreen message="טוען משפחות…" />
@@ -48,6 +49,11 @@ export default function FamiliesPage() {
   const handleAdd = async (family) => {
     await families.insert(family)
     setToast({ kind: 'ok', message: 'המשפחה נוספה למאגר.' })
+  }
+
+  const handleUpdate = async (patch) => {
+    await families.update(editFamily.id, patch)
+    setToast({ kind: 'ok', message: 'פרטי המשפחה עודכנו.' })
   }
 
   const handleImport = async (rows) => {
@@ -156,6 +162,7 @@ export default function FamiliesPage() {
             family={f}
             currentProfile={profile}
             onAssignToMe={assignToMe}
+            onEdit={setEditFamily}
           />
         ))}
         {filtered.length === 0 && (
@@ -175,6 +182,16 @@ export default function FamiliesPage() {
           defaultResponsibleId={
             profile?.role === 'service' ? profile.id : undefined
           }
+        />
+      )}
+
+      {editFamily && (
+        <FamilyForm
+          family={editFamily}
+          onClose={() => setEditFamily(null)}
+          onSave={handleUpdate}
+          branches={branches}
+          profiles={profiles}
         />
       )}
 
