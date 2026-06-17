@@ -12,6 +12,7 @@ import Field, { inputCls } from '../shared/Field'
 import LoadingScreen from '../shared/LoadingScreen'
 import { useAuth } from '../../contexts/AuthContext'
 import { useBranches } from '../../hooks/useBranches'
+import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
 
 const ROLE_OPTIONS = [
   {
@@ -28,7 +29,7 @@ const ROLE_OPTIONS = [
     desc: 'הירשם לפעילויות ולחלוקות סלי מזון',
     icon: HandHeart,
     color: 'orange',
-    needsBranch: false,
+    needsBranch: true,
   },
   {
     id: 'instructor',
@@ -56,15 +57,26 @@ export default function RoleSelector() {
   const [branchId, setBranchId] = useState('')
   const [skills, setSkills] = useState('')
   const [phone, setPhone] = useState(user?.user_metadata?.phone || '')
+  const [age, setAge] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
   if (branchesLoading) return <LoadingScreen message="טוען סניפים…" />
 
+  const needsAge = role === 'volunteer' || role === 'instructor'
+
   const save = async () => {
     if (!role) return
     if (!phone.trim()) {
       setError('יש להזין טלפון ליצירת קשר')
+      return
+    }
+    if (!isValidIsraeliPhone(phone)) {
+      setError('מספר הטלפון אינו תקין (לדוגמה: 050-1234567)')
+      return
+    }
+    if (needsAge && (!age || Number(age) < 1)) {
+      setError('יש להזין גיל')
       return
     }
     const opt = ROLE_OPTIONS.find((r) => r.id === role)
@@ -75,9 +87,10 @@ export default function RoleSelector() {
     setError(null)
     setBusy(true)
     try {
-      const updates = { role, phone: phone.trim() }
+      const updates = { role, phone: normalizePhone(phone) }
       if (opt.needsBranch) updates.branch_id = branchId
       else updates.branch_id = null
+      if (needsAge) updates.age = Number(age)
       if (role === 'instructor') updates.skills = skills.trim() || null
       await updateProfile(updates)
     } catch (err) {
@@ -153,6 +166,19 @@ export default function RoleSelector() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="050-1234567"
+            />
+          </Field>
+        )}
+
+        {needsAge && (
+          <Field label="גיל">
+            <input
+              className={inputCls}
+              type="number"
+              min="1"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="לדוגמה: 24"
             />
           </Field>
         )}

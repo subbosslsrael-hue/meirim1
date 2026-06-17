@@ -3,18 +3,7 @@ import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { CATEGORIES } from '../../lib/constants'
 import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
-
-// מנרמל מספר טלפון ישראלי: מסיר רווחים/מקפים וממיר קידומת בינ"ל ל-0.
-const normalizePhone = (raw) => {
-  let p = (raw || '').replace(/[\s\-()]/g, '')
-  if (p.startsWith('+972')) p = '0' + p.slice(4)
-  else if (p.startsWith('972')) p = '0' + p.slice(3)
-  return p
-}
-
-// בודק תקינות: נייד (05X), VoIP (07X) או קווי (02/03/04/08/09).
-const isValidIsraeliPhone = (raw) =>
-  /^0(5\d|7\d|[2-489])\d{7}$/.test(normalizePhone(raw))
+import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
 
 export default function FamilyForm({
   onClose,

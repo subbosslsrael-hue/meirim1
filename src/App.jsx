@@ -6,6 +6,7 @@ import {
   Truck,
   ClipboardList,
   BookOpen,
+  Contact,
 } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/auth/LoginScreen'
@@ -19,12 +20,14 @@ import ActivitiesPage from './components/activities/ActivitiesPage'
 import DistributionPage from './components/distribution/DistributionPage'
 import ReportsPage from './components/reports/ReportsPage'
 import DocsPage from './components/docs/DocsPage'
+import TeamPage from './components/team/TeamPage'
 
 const ALL_TABS = [
   { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
   { id: 'families', label: 'ניהול משפחות', icon: Users },
   { id: 'activities', label: 'פעילויות ומדריכים', icon: CalendarHeart },
   { id: 'distribution', label: 'חלוקת מוצרים', icon: Truck },
+  { id: 'team', label: 'צוות', icon: Contact },
   { id: 'reports', label: 'דיווחים ומעקב', icon: ClipboardList },
   { id: 'docs', label: 'אפיון ותיעוד', icon: BookOpen },
 ]
@@ -75,6 +78,7 @@ function AppShell() {
           {tab === 'families' && <FamiliesPage />}
           {tab === 'activities' && <ActivitiesPage />}
           {tab === 'distribution' && <DistributionPage />}
+          {tab === 'team' && <TeamPage />}
           {tab === 'reports' && <ReportsPage />}
           {tab === 'docs' && <DocsPage />}
         </div>
