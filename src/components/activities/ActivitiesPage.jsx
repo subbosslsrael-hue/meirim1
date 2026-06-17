@@ -144,6 +144,7 @@ export default function ActivitiesPage() {
           branches={branches}
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
+          lockBranch={profile?.role !== 'admin'}
         />
       )}
 

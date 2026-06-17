@@ -23,6 +23,7 @@ export default function ActivityForm({
   branches,
   instructors,
   defaultBranchId,
+  lockBranch = false,
 }) {
   const [form, setForm] = useState({
     name: '',
@@ -98,17 +99,25 @@ export default function ActivityForm({
         </Field>
       </div>
       <Field label="סניף">
-        <select
-          className={inputCls}
-          value={form.branch_id}
-          onChange={(e) => setForm({ ...form, branch_id: e.target.value })}
-        >
-          {branches.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        {lockBranch ? (
+          <input
+            className={inputCls}
+            value={branches.find((b) => b.id === form.branch_id)?.name || ''}
+            disabled
+          />
+        ) : (
+          <select
+            className={inputCls}
+            value={form.branch_id}
+            onChange={(e) => setForm({ ...form, branch_id: e.target.value })}
+          >
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
       </Field>
       <Field label="מיומנויות נדרשות (מופרדות בפסיק)">
         <input
