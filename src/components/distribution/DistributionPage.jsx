@@ -144,17 +144,17 @@ export default function DistributionPage() {
     await distributions.mutate()
   }
 
-  const photoUploaded = async (stopId, familyId, url) => {
+  const photoUploaded = async (stopId, familyId, path) => {
     const { error: e1 } = await supabase
       .from('distribution_stops')
-      .update({ photo_url: url })
+      .update({ photo_url: path })
       .eq('id', stopId)
     if (e1) throw e1
     // נסה לשמור גם על כרטיס המשפחה לחלוקות עתידיות.
     // מתנדב/מדריך אין להם UPDATE על families — נתעלם משגיאה כאן.
     const { error: e2 } = await supabase
       .from('families')
-      .update({ door_photo_url: url })
+      .update({ door_photo_url: path })
       .eq('id', familyId)
     if (e2) console.warn('לא ניתן לעדכן תמונת דלת בכרטיס המשפחה:', e2.message)
     await distributions.mutate()

@@ -22,6 +22,7 @@ import { useProfiles } from '../../hooks/useProfiles'
 import { useFamilies } from '../../hooks/useFamilies'
 import { useActivities } from '../../hooks/useActivities'
 import { useDistributionArchives } from '../../hooks/useDistributionArchives'
+import { getDoorPhotoUrl } from '../../lib/storage'
 
 function currentWeek() {
   const d = new Date()
@@ -177,15 +178,19 @@ export default function ReportsPage() {
                             </div>
                           </div>
                           {s.photo_url && (
-                            <a
-                              href={s.photo_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const w = window.open('about:blank', '_blank')
+                                const u = await getDoorPhotoUrl(s.photo_url)
+                                if (u && w) w.location.href = u
+                                else if (w) w.close()
+                              }}
                               className="text-amber-600"
                               title="תמונת מסירה"
                             >
                               <CameraIcon size={14} />
-                            </a>
+                            </button>
                           )}
                           <span className="text-[10px] text-stone-400 shrink-0">
                             {s.delivered_at

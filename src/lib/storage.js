@@ -1,10 +1,13 @@
 import { supabase } from './supabase'
 
 const BUCKET = 'door-photos'
+// תוקף הקישור החתום בשניות (שעה). מספיק לצפייה, פג מעצמו.
+const SIGNED_TTL = 60 * 60
 
 /**
  * מעלה קובץ ל-Storage תחת door-photos/{familyId}-{timestamp}.{ext}
- * מחזיר URL ציבורי. דורש שהבאקט יוגדר ציבורי או שיש לקוח עם הרשאות מתאימות.
+ * מחזיר את ה*נתיב* של הקובץ (לא URL). הבאקט פרטי — צפייה נעשית
+ * דרך קישור חתום (getDoorPhotoUrl).
  */
 export async function uploadDoorPhoto({ familyId, file }) {
   if (!file) throw new Error('לא נבחר קובץ')
@@ -20,6 +23,30 @@ export async function uploadDoorPhoto({ familyId, file }) {
     })
   if (error) throw error
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return data.publicUrl
+  return path
+}
+
+/**
+ * מקבל נתיב קובץ (או, לתאימות לאחור, URL ציבורי ישן שנשמר בעבר)
+ * ומחזיר קישור חתום זמני לצפייה. מחזיר null אם אין הרשאה/הקובץ חסר.
+ */
+export async function getDoorPhotoUrl(pathOrUrl) {
+  if (!pathOrUrl) return null
+
+  // תאימות לאחור: אם נשמר בעבר URL ציבורי מלא, נחלץ ממנו את הנתיב.
+  let path = pathOrUrl
+  const marker = `/${BUCKET}/`
+  const idx = pathOrUrl.indexOf(marker)
+  if (idx !== -1) {
+    path = pathOrUrl.slice(idx + marker.length).split('?')[0]
+  }
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, SIGNED_TTL)
+  if (error) {
+    console.warn('לא ניתן לייצר קישור לתמונת דלת:', error.message)
+    return null
+  }
+  return data.signedUrl
 }

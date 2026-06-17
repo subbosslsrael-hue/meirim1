@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Camera,
   CheckCircle2,
@@ -8,7 +8,7 @@ import {
   Navigation,
   X,
 } from 'lucide-react'
-import { uploadDoorPhoto } from '../../lib/storage'
+import { getDoorPhotoUrl, uploadDoorPhoto } from '../../lib/storage'
 
 function StopRow({
   stop,
@@ -23,7 +23,24 @@ function StopRow({
   const [error, setError] = useState(null)
   const [viewing, setViewing] = useState(false)
   const f = stop.family || {}
-  const photoUrl = stop.photo_url || f.door_photo_url
+  // הנתיב השמור (של החלוקה הנוכחית, ואם אין — של כרטיס המשפחה).
+  const photoKey = stop.photo_url || f.door_photo_url
+  // קישור חתום זמני שמיוצר לצפייה; הבאקט פרטי.
+  const [displayUrl, setDisplayUrl] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    if (!photoKey) {
+      setDisplayUrl(null)
+      return
+    }
+    getDoorPhotoUrl(photoKey).then((u) => {
+      if (active) setDisplayUrl(u)
+    })
+    return () => {
+      active = false
+    }
+  }, [photoKey])
 
   const upload = async (e) => {
     const file = e.target.files?.[0]
@@ -31,8 +48,8 @@ function StopRow({
     setBusy(true)
     setError(null)
     try {
-      const url = await uploadDoorPhoto({ familyId: f.id, file })
-      await onPhotoUploaded(stop.id, f.id, url)
+      const path = await uploadDoorPhoto({ familyId: f.id, file })
+      await onPhotoUploaded(stop.id, f.id, path)
     } catch (err) {
       setError(err.message || 'שגיאה בהעלאה')
     } finally {
@@ -107,7 +124,7 @@ function StopRow({
               ? 'תפוס'
               : 'אני אקח'}
         </button>
-        {photoUrl && (
+        {displayUrl && (
           <button
             type="button"
             onClick={() => setViewing(true)}
@@ -115,7 +132,7 @@ function StopRow({
             className="w-9 h-9 rounded-lg overflow-hidden border border-stone-200 shrink-0"
           >
             <img
-              src={photoUrl}
+              src={displayUrl}
               alt="תמונת דלת"
               className="w-full h-full object-cover"
             />
@@ -127,12 +144,12 @@ function StopRow({
           title={
             !canModify
               ? 'יש לתפוס את היעד תחילה'
-              : photoUrl
+              : photoKey
                 ? 'החלף תמונה'
                 : 'צילום פתח-בית'
           }
           className={`p-1.5 rounded-lg ${
-            photoUrl
+            photoKey
               ? 'bg-amber-100 text-amber-700'
               : 'bg-white text-stone-300 border border-stone-200'
           } disabled:opacity-40 disabled:cursor-not-allowed`}
@@ -162,7 +179,7 @@ function StopRow({
         </button>
       </div>
 
-      {viewing && photoUrl && (
+      {viewing && displayUrl && (
         <div
           className="fixed inset-0 z-[2000] bg-black/80 flex flex-col items-center justify-center p-4"
           onClick={() => setViewing(false)}
@@ -184,7 +201,7 @@ function StopRow({
               </button>
             </div>
             <img
-              src={photoUrl}
+              src={displayUrl}
               alt="תמונת דלת"
               className="w-full max-h-[75vh] object-contain rounded-xl bg-stone-900"
             />
