@@ -9,6 +9,7 @@ import {
   ClipboardList,
   MapPin,
   Pencil,
+  MessageCircle,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import Stars from '../shared/Stars'
@@ -32,6 +33,7 @@ export default function ActivityCard({
   onDebrief,
   onToggleSignup,
   onEdit,
+  onChat,
 }) {
   const instructorNames = (activity.instructors || [])
     .map((row) => row.profile?.name)
@@ -44,6 +46,16 @@ export default function ActivityCard({
   const signedCount = (activity.participants_list || []).length
 
   const isVolunteer = currentProfile?.role === 'volunteer'
+  // גישה לצ׳אט: מנהל, יוצר הפעילות, בת שירות של הסניף, מדריך משובץ, או מתנדב רשום.
+  const canChat =
+    currentProfile?.role === 'admin' ||
+    activity.created_by === currentProfile?.id ||
+    (currentProfile?.role === 'service' &&
+      activity.branch_id === currentProfile?.branch_id) ||
+    (activity.instructors || []).some(
+      (r) => r.profile?.id === currentProfile?.id,
+    ) ||
+    signedUp
   const canManage =
     currentProfile?.role === 'admin' ||
     currentProfile?.role === 'instructor' ||
@@ -115,17 +127,29 @@ export default function ActivityCard({
                 )}
               </div>
             )}
-          {isVolunteer && activity.status !== 'done' && (
-            <button
-              onClick={() => onToggleSignup(activity, signedUp)}
-              className={`mt-3 text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                signedUp
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-orange-500 text-white hover:bg-orange-600'
-              }`}
-            >
-              {signedUp ? '✓ נרשמת — לחץ לביטול' : '+ אני נרשם/ת'}
-            </button>
+          {((isVolunteer && activity.status !== 'done') || canChat) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {isVolunteer && activity.status !== 'done' && (
+                <button
+                  onClick={() => onToggleSignup(activity, signedUp)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                    signedUp
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-orange-500 text-white hover:bg-orange-600'
+                  }`}
+                >
+                  {signedUp ? '✓ נרשמת — לחץ לביטול' : '+ אני נרשם/ת'}
+                </button>
+              )}
+              {canChat && onChat && (
+                <button
+                  onClick={() => onChat(activity)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 flex items-center gap-1"
+                >
+                  <MessageCircle size={14} /> צ׳אט
+                </button>
+              )}
+            </div>
           )}
         </div>
 

@@ -5,7 +5,7 @@ export function useActivities({ enabled = true } = {}) {
     table: 'activities',
     select: `
       id, name, project, activity_date, activity_time, location, status,
-      participants, cost, required_skills, branch_id,
+      participants, cost, required_skills, branch_id, created_by,
       rating, debrief_note,
       branch:branches(id, name, city),
       instructors:activity_instructors(profile:profiles(id, name, skills)),

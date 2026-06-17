@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import ActivityCard from './ActivityCard'
 import ActivityForm from './ActivityForm'
+import ActivityChat from './ActivityChat'
 import DebriefModal from './DebriefModal'
 import LoadingScreen from '../shared/LoadingScreen'
 import { PROJECTS } from '../../lib/constants'
@@ -28,6 +29,7 @@ export default function ActivitiesPage() {
   const [q, setQ] = useState('')
   const [openAdd, setOpenAdd] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [chatting, setChatting] = useState(null)
   const [debriefing, setDebriefing] = useState(null)
 
   if (activities.loading) return <LoadingScreen message="טוען פעילויות…" />
@@ -50,7 +52,7 @@ export default function ActivitiesPage() {
   }
 
   const handleAdd = async ({ instructorIds, ...rest }) => {
-    const inserted = await activities.insert(rest)
+    const inserted = await activities.insert({ ...rest, created_by: profile.id })
     if (instructorIds?.length) {
       const rows = instructorIds.map((pid) => ({
         activity_id: inserted.id,
@@ -158,6 +160,7 @@ export default function ActivitiesPage() {
             onDebrief={setDebriefing}
             onToggleSignup={toggleSignup}
             onEdit={setEditing}
+            onChat={setChatting}
           />
         ))}
         {list.length === 0 && (
@@ -187,6 +190,14 @@ export default function ActivitiesPage() {
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
           lockBranch={profile?.role === 'service'}
+        />
+      )}
+
+      {chatting && (
+        <ActivityChat
+          activity={chatting}
+          currentProfile={profile}
+          onClose={() => setChatting(null)}
         />
       )}
 
