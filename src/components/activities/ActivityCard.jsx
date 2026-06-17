@@ -7,10 +7,23 @@ import {
   HandHeart,
   Star,
   ClipboardList,
+  MapPin,
+  Pencil,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import Stars from '../shared/Stars'
 import { STATUS } from '../../lib/constants'
+
+// "יום ראשון, 18.6.2026 · 17:30" מתוך תאריך + שעה.
+const formatWhen = (dateStr, timeStr) => {
+  if (!dateStr) return '—'
+  const d = new Date(`${dateStr}T00:00:00`)
+  if (isNaN(d)) return dateStr
+  const day = d.toLocaleDateString('he-IL', { weekday: 'long' })
+  const date = d.toLocaleDateString('he-IL')
+  const time = timeStr ? ` · ${timeStr.slice(0, 5)}` : ''
+  return `${day}, ${date}${time}`
+}
 
 export default function ActivityCard({
   activity,
@@ -18,6 +31,7 @@ export default function ActivityCard({
   onCycle,
   onDebrief,
   onToggleSignup,
+  onEdit,
 }) {
   const instructorNames = (activity.instructors || [])
     .map((row) => row.profile?.name)
@@ -32,6 +46,7 @@ export default function ActivityCard({
   const isVolunteer = currentProfile?.role === 'volunteer'
   const canManage =
     currentProfile?.role === 'admin' ||
+    currentProfile?.role === 'instructor' ||
     (currentProfile?.role === 'service' &&
       activity.branch_id === currentProfile.branch_id)
 
@@ -52,8 +67,14 @@ export default function ActivityCard({
             </span>
             <span className="flex items-center gap-1">
               <CalendarHeart size={13} />
-              {activity.activity_date || '—'}
+              {formatWhen(activity.activity_date, activity.activity_time)}
             </span>
+            {activity.location && (
+              <span className="flex items-center gap-1">
+                <MapPin size={13} />
+                {activity.location}
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Users size={13} />
               {activity.participants} משתתפים
@@ -116,6 +137,14 @@ export default function ActivityCard({
             >
               {STATUS[activity.status]?.label || activity.status} ↻
             </button>
+            {onEdit && (
+              <button
+                onClick={() => onEdit(activity)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 flex items-center gap-1 justify-center"
+              >
+                <Pencil size={13} /> עריכה
+              </button>
+            )}
             <button
               onClick={() => onDebrief(activity)}
               className="text-xs font-semibold px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 flex items-center gap-1 justify-center"

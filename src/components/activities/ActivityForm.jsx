@@ -10,6 +10,13 @@ const skillTokens = (s) =>
     .map((t) => t.trim())
     .filter(Boolean)
 
+// יום בשבוע בעברית מתוך תאריך (YYYY-MM-DD), ללא בעיות אזור-זמן.
+const hebrewDay = (dateStr) => {
+  if (!dateStr) return ''
+  const d = new Date(`${dateStr}T00:00:00`)
+  return isNaN(d) ? '' : d.toLocaleDateString('he-IL', { weekday: 'long' })
+}
+
 const matchScore = (instructor, required) => {
   const req = skillTokens(required)
   if (!req.length) return 0
@@ -24,17 +31,23 @@ export default function ActivityForm({
   instructors,
   defaultBranchId,
   lockBranch = false,
+  activity,
 }) {
+  const isEdit = !!activity
   const [form, setForm] = useState({
-    name: '',
-    project: PROJECTS[0],
-    activity_date: '',
-    branch_id: defaultBranchId || branches[0]?.id || '',
-    status: 'planning',
-    required_skills: '',
-    participants: 0,
-    cost: 0,
-    instructorIds: [],
+    name: activity?.name || '',
+    project: activity?.project || PROJECTS[0],
+    activity_date: activity?.activity_date || '',
+    activity_time: (activity?.activity_time || '').slice(0, 5),
+    location: activity?.location || '',
+    branch_id: activity?.branch_id || defaultBranchId || branches[0]?.id || '',
+    status: activity?.status || 'planning',
+    required_skills: activity?.required_skills || '',
+    participants: activity?.participants ?? 0,
+    cost: activity?.cost ?? 0,
+    instructorIds: (activity?.instructors || [])
+      .map((r) => r.profile?.id)
+      .filter(Boolean),
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -49,7 +62,7 @@ export default function ActivityForm({
 
   const submit = async () => {
     if (!form.name.trim()) {
-      setError('יש להזין שם פעילות')
+      setError('יש להזין תיאור פעילות')
       return
     }
     setBusy(true)
@@ -59,6 +72,8 @@ export default function ActivityForm({
         ...form,
         participants: Number(form.participants) || 0,
         cost: Number(form.cost) || 0,
+        activity_time: form.activity_time || null,
+        location: form.location?.trim() || null,
       })
       onClose()
     } catch (err) {
@@ -69,12 +84,17 @@ export default function ActivityForm({
   }
 
   return (
-    <Modal title="הוספת פעילות חדשה" onClose={onClose}>
-      <Field label="שם הפעילות">
-        <input
+    <Modal
+      title={isEdit ? 'עריכת פעילות' : 'הוספת פעילות חדשה'}
+      onClose={onClose}
+    >
+      <Field label="תיאור הפעילות">
+        <textarea
           className={inputCls}
+          rows={3}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="מה הולך להיות בפעילות?"
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -95,6 +115,29 @@ export default function ActivityForm({
             className={inputCls}
             value={form.activity_date}
             onChange={(e) => setForm({ ...form, activity_date: e.target.value })}
+          />
+          {hebrewDay(form.activity_date) && (
+            <p className="text-[11px] text-emerald-700 mt-1">
+              {hebrewDay(form.activity_date)}
+            </p>
+          )}
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="שעה">
+          <input
+            type="time"
+            className={inputCls}
+            value={form.activity_time}
+            onChange={(e) => setForm({ ...form, activity_time: e.target.value })}
+          />
+        </Field>
+        <Field label="מקום הפעילות">
+          <input
+            className={inputCls}
+            value={form.location}
+            onChange={(e) => setForm({ ...form, location: e.target.value })}
+            placeholder="לדוגמה: מתנ״ס שכונה ג׳"
           />
         </Field>
       </div>

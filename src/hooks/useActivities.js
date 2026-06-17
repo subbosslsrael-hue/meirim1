@@ -4,7 +4,7 @@ export function useActivities({ enabled = true } = {}) {
   return useSupabaseTable({
     table: 'activities',
     select: `
-      id, name, project, activity_date, status,
+      id, name, project, activity_date, activity_time, location, status,
       participants, cost, required_skills, branch_id,
       rating, debrief_note,
       branch:branches(id, name, city),

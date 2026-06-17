@@ -27,6 +27,7 @@ export default function ActivitiesPage() {
   const [filter, setFilter] = useState('הכל')
   const [q, setQ] = useState('')
   const [openAdd, setOpenAdd] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [debriefing, setDebriefing] = useState(null)
 
   if (activities.loading) return <LoadingScreen message="טוען פעילויות…" />
@@ -59,6 +60,34 @@ export default function ActivitiesPage() {
       if (error) throw error
       await activities.mutate()
     }
+  }
+
+  const handleUpdate = async ({ instructorIds, ...rest }) => {
+    await activities.update(editing.id, rest)
+    // סנכרון מדריכים: הסרת מי שהוסר, הוספת מי שנוסף.
+    const existing = (editing.instructors || [])
+      .map((r) => r.profile?.id)
+      .filter(Boolean)
+    const next = instructorIds || []
+    const toRemove = existing.filter((id) => !next.includes(id))
+    const toAdd = next.filter((id) => !existing.includes(id))
+    if (toRemove.length) {
+      const { error } = await supabase
+        .from('activity_instructors')
+        .delete()
+        .eq('activity_id', editing.id)
+        .in('profile_id', toRemove)
+      if (error) throw error
+    }
+    if (toAdd.length) {
+      const rows = toAdd.map((pid) => ({
+        activity_id: editing.id,
+        profile_id: pid,
+      }))
+      const { error } = await supabase.from('activity_instructors').insert(rows)
+      if (error) throw error
+    }
+    await activities.mutate()
   }
 
   const toggleSignup = async (activity, currentlyIn) => {
@@ -128,6 +157,7 @@ export default function ActivitiesPage() {
             onCycle={cycle}
             onDebrief={setDebriefing}
             onToggleSignup={toggleSignup}
+            onEdit={setEditing}
           />
         ))}
         {list.length === 0 && (
@@ -141,6 +171,18 @@ export default function ActivitiesPage() {
         <ActivityForm
           onClose={() => setOpenAdd(false)}
           onSave={handleAdd}
+          branches={branches}
+          instructors={instructors}
+          defaultBranchId={profile?.branch_id}
+          lockBranch={profile?.role === 'service'}
+        />
+      )}
+
+      {editing && (
+        <ActivityForm
+          activity={editing}
+          onClose={() => setEditing(null)}
+          onSave={handleUpdate}
           branches={branches}
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
