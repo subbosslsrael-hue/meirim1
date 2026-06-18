@@ -115,7 +115,7 @@ export default function Header({
 
       {/* תפריט נשלף למובייל */}
       <div
-        className={`md:hidden fixed inset-0 z-50 ${
+        className={`md:hidden fixed inset-0 z-[2000] ${
           open ? '' : 'pointer-events-none'
         }`}
       >
