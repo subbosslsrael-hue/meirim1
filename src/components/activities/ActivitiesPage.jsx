@@ -33,11 +33,15 @@ export default function ActivitiesPage() {
   const [chatting, setChatting] = useState(null)
   const [viewingParticipants, setViewingParticipants] = useState(null)
   const [debriefing, setDebriefing] = useState(null)
-  const [unread, setUnread] = useState(new Set())
+  const [unread, setUnread] = useState({})
 
   const loadUnread = useCallback(async () => {
     const { data } = await supabase.rpc('activities_with_unread')
-    setUnread(new Set((data || []).map((r) => r.activity_id)))
+    const map = {}
+    ;(data || []).forEach((r) => {
+      map[r.activity_id] = r.unread
+    })
+    setUnread(map)
   }, [])
 
   useEffect(() => {
@@ -180,7 +184,7 @@ export default function ActivitiesPage() {
             onEdit={setEditing}
             onChat={setChatting}
             onParticipants={setViewingParticipants}
-            hasUnread={unread.has(a.id)}
+            unreadCount={unread[a.id] || 0}
           />
         ))}
         {list.length === 0 && (
