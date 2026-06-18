@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Star,
   Paperclip,
+  X,
 } from 'lucide-react'
 import {
   BarChart,
@@ -33,6 +34,7 @@ import { useActivities } from '../../hooks/useActivities'
 import { useDistributionArchives } from '../../hooks/useDistributionArchives'
 import { useActivityArchives } from '../../hooks/useActivityArchives'
 import { getDoorPhotoUrl, getActivityFileUrl } from '../../lib/storage'
+import { supabase } from '../../lib/supabase'
 
 function currentWeek() {
   const d = new Date()
@@ -60,12 +62,31 @@ export default function ReportsPage() {
   const [expandedAct, setExpandedAct] = useState(null)
   const [form, setForm] = useState({
     week: currentWeek(),
-    project: PROJECTS[0],
-    hours: 0,
+    items: [{ activity_id: '', hours: '' }],
     note: '',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  const setItem = (idx, key, val) =>
+    setForm((f) => ({
+      ...f,
+      items: f.items.map((it, i) => (i === idx ? { ...it, [key]: val } : it)),
+    }))
+  const addItem = () =>
+    setForm((f) => ({ ...f, items: [...f.items, { activity_id: '', hours: '' }] }))
+  const removeItem = (idx) =>
+    setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }))
+
+  const formTotal = form.items.reduce((s, it) => s + (Number(it.hours) || 0), 0)
+
+  const weeklyTotals = useMemo(() => {
+    const m = {}
+    reports.data.forEach((r) => {
+      m[r.week] = (m[r.week] || 0) + Number(r.hours || 0)
+    })
+    return Object.entries(m).sort((a, b) => (a[0] < b[0] ? 1 : -1))
+  }, [reports.data])
 
   const byProfile = useMemo(() => {
     const m = {}
@@ -80,21 +101,36 @@ export default function ReportsPage() {
   if (reports.loading) return <LoadingScreen message="טוען דיווחים…" />
 
   const submit = async () => {
-    if (!Number(form.hours)) {
-      setError('יש להזין מספר שעות גדול מ-0')
+    const valid = form.items.filter(
+      (it) => it.activity_id && Number(it.hours) > 0,
+    )
+    if (!valid.length) {
+      setError('יש לבחור לפחות פעילות אחת עם מספר שעות גדול מ-0')
       return
     }
     setBusy(true)
     setError(null)
     try {
-      await reports.insert({
-        profile_id: profile.id,
-        week: form.week,
-        project: form.project,
-        hours: Number(form.hours),
-        note: form.note,
+      const rows = valid.map((it) => {
+        const act = activities.find((a) => a.id === it.activity_id)
+        return {
+          profile_id: profile.id,
+          week: form.week,
+          activity_id: it.activity_id,
+          activity_name: act?.name || null,
+          project: act?.project || PROJECTS[0],
+          hours: Number(it.hours),
+          note: form.note || null,
+        }
       })
-      setForm({ week: currentWeek(), project: PROJECTS[0], hours: 0, note: '' })
+      const { error: err } = await supabase.from('activity_reports').insert(rows)
+      if (err) throw err
+      await reports.mutate()
+      setForm({
+        week: currentWeek(),
+        items: [{ activity_id: '', hours: '' }],
+        note: '',
+      })
       setOpen(false)
     } catch (err) {
       setError(err.message || 'שגיאה בשמירה')
@@ -324,6 +360,25 @@ export default function ReportsPage() {
 
       <ComplianceTracker reports={reports.data} profiles={profiles} />
 
+      {weeklyTotals.length > 0 && (
+        <Card className="p-4">
+          <h4 className="font-bold text-stone-800 text-sm mb-3">
+            סיכום שעות שבועי
+          </h4>
+          <div className="space-y-1.5">
+            {weeklyTotals.map(([week, total]) => (
+              <div
+                key={week}
+                className="flex items-center justify-between text-sm border-b border-stone-50 pb-1.5 last:border-0 last:pb-0"
+              >
+                <span className="text-stone-600">{week}</span>
+                <span className="font-bold text-emerald-700">{total} שעות</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card className="p-5">
         <h4 className="font-bold text-stone-800 text-sm mb-3">
           תפוקת מתנדבים — סה״כ שעות לפי משתתף
@@ -350,6 +405,7 @@ export default function ReportsPage() {
             <tr>
               <th className="text-right font-semibold px-4 py-2.5">מדווח/ת</th>
               <th className="text-right font-semibold px-4 py-2.5">שבוע</th>
+              <th className="text-right font-semibold px-4 py-2.5">פעילות</th>
               <th className="text-right font-semibold px-4 py-2.5">פרויקט</th>
               <th className="text-right font-semibold px-4 py-2.5">שעות</th>
               <th className="text-right font-semibold px-4 py-2.5 hidden md:table-cell">
@@ -364,6 +420,9 @@ export default function ReportsPage() {
                   {r.profile?.name || '—'}
                 </td>
                 <td className="px-4 py-2.5 text-stone-500">{r.week}</td>
+                <td className="px-4 py-2.5 text-stone-700">
+                  {r.activity_name || '—'}
+                </td>
                 <td className="px-4 py-2.5">
                   <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
                     {r.project}
@@ -380,7 +439,7 @@ export default function ReportsPage() {
             {reports.data.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-stone-400 text-sm py-6"
                 >
                   אין דיווחים עדיין.
@@ -392,42 +451,76 @@ export default function ReportsPage() {
       </Card>
 
       {open && (
-        <Modal title="דיווח פעילות שבועי" onClose={() => setOpen(false)}>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="שבוע">
-              <input
-                className={inputCls}
-                value={form.week}
-                onChange={(e) => setForm({ ...form, week: e.target.value })}
-                placeholder="2026-W22"
-              />
-            </Field>
-            <Field label="שעות">
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                className={inputCls}
-                value={form.hours}
-                onChange={(e) => setForm({ ...form, hours: e.target.value })}
-              />
-            </Field>
-          </div>
-          <Field label="פרויקט">
-            <select
+        <Modal title="דיווח שעות שבועי" onClose={() => setOpen(false)}>
+          <Field label="שבוע">
+            <input
               className={inputCls}
-              value={form.project}
-              onChange={(e) => setForm({ ...form, project: e.target.value })}
-            >
-              {PROJECTS.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+              value={form.week}
+              onChange={(e) => setForm({ ...form, week: e.target.value })}
+              placeholder="2026-W22"
+            />
           </Field>
-          <Field label="תיאור הפעילות">
+
+          <div className="text-sm font-semibold text-stone-600 mb-1.5">
+            שעות לפי פעילות
+          </div>
+          <div className="space-y-2">
+            {form.items.map((it, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <select
+                  className={`${inputCls} flex-1`}
+                  value={it.activity_id}
+                  onChange={(e) => setItem(idx, 'activity_id', e.target.value)}
+                >
+                  <option value="">— בחר פעילות —</option>
+                  {activities.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  className={`${inputCls} w-20`}
+                  value={it.hours}
+                  onChange={(e) => setItem(idx, 'hours', e.target.value)}
+                  placeholder="שעות"
+                />
+                {form.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="text-stone-400 hover:text-rose-600 shrink-0"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addItem}
+            className="mt-2 text-sm text-emerald-700 font-semibold hover:underline"
+          >
+            + הוסף פעילות
+          </button>
+
+          <div className="mt-3 flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            <span className="text-sm font-semibold text-stone-700">
+              סה״כ שעות שבועיות
+            </span>
+            <span className="text-lg font-extrabold text-emerald-700">
+              {formTotal}
+            </span>
+          </div>
+
+          <Field label="הערה (אופציונלי)">
             <textarea
               className={inputCls}
-              rows={3}
+              rows={2}
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
             />
