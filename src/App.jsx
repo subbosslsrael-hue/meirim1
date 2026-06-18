@@ -7,6 +7,7 @@ import {
   ClipboardList,
   BookOpen,
   Contact,
+  MessagesSquare,
 } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/auth/LoginScreen'
@@ -21,6 +22,7 @@ import DistributionPage from './components/distribution/DistributionPage'
 import ReportsPage from './components/reports/ReportsPage'
 import DocsPage from './components/docs/DocsPage'
 import TeamPage from './components/team/TeamPage'
+import ChatPage from './components/chat/ChatPage'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
 import WeeklyReportGate from './components/reports/WeeklyReportGate'
 
@@ -29,6 +31,7 @@ const ALL_TABS = [
   { id: 'families', label: 'ניהול משפחות', icon: Users },
   { id: 'activities', label: 'פעילויות ומדריכים', icon: CalendarHeart },
   { id: 'distribution', label: 'חלוקת מוצרים', icon: Truck },
+  { id: 'chat', label: 'צ׳אט', icon: MessagesSquare },
   { id: 'team', label: 'צוות', icon: Contact },
   { id: 'reports', label: 'דיווחים ומעקב', icon: ClipboardList },
   { id: 'docs', label: 'אפיון ותיעוד', icon: BookOpen },
@@ -38,8 +41,8 @@ const TABS_BY_ROLE = {
   admin: ALL_TABS.map((t) => t.id),
   // בת שירות רואה הכל מלבד "אפיון ותיעוד" (למנכ"ל בלבד)
   service: ALL_TABS.map((t) => t.id).filter((id) => id !== 'docs'),
-  instructor: ['dashboard', 'activities', 'distribution', 'reports'],
-  volunteer: ['dashboard', 'activities', 'distribution'],
+  instructor: ['dashboard', 'activities', 'distribution', 'chat', 'reports'],
+  volunteer: ['dashboard', 'activities', 'distribution', 'chat'],
 }
 
 // משתמש שטרם השלים בחירת תפקיד — phone עוד לא הוגדר ב-profile
@@ -81,6 +84,7 @@ function AppShell() {
           {tab === 'families' && <FamiliesPage />}
           {tab === 'activities' && <ActivitiesPage />}
           {tab === 'distribution' && <DistributionPage />}
+          {tab === 'chat' && <ChatPage />}
           {tab === 'team' && <TeamPage />}
           {tab === 'reports' && <ReportsPage />}
           {tab === 'docs' && <DocsPage />}
