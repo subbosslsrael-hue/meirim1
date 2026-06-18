@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useChatUnread } from '../../hooks/useChatUnread'
 
 const PRESET_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏']
 
@@ -70,6 +71,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
       setReactions({})
     }
     setLoading(false)
+    supabase.rpc('mark_chat_read', { p_channel: channel })
   }, [channel])
 
   useEffect(() => {
@@ -399,6 +401,7 @@ export default function ChatPage() {
   const isAdmin = profile?.role === 'admin'
   const isAdminOrService = isAdmin || profile?.role === 'service'
   const canPost = channel === 'general' || isAdminOrService
+  const { counts } = useChatUnread()
 
   const TABS = [
     { id: 'general', label: 'כללי', icon: MessagesSquare },
@@ -411,11 +414,12 @@ export default function ChatPage() {
         {TABS.map((t) => {
           const Icon = t.icon
           const active = channel === t.id
+          const unread = active ? 0 : counts[t.id] || 0
           return (
             <button
               key={t.id}
               onClick={() => setChannel(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${
+              className={`relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${
                 active
                   ? 'bg-amber-500 text-white shadow'
                   : 'bg-white border border-stone-200 text-stone-600'
@@ -423,6 +427,11 @@ export default function ChatPage() {
             >
               <Icon size={16} />
               {t.label}
+              {unread > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {unread}
+                </span>
+              )}
             </button>
           )
         })}

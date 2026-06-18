@@ -1,7 +1,7 @@
 import React from 'react'
 import { Sun } from 'lucide-react'
 
-export default function Sidebar({ tabs, activeTab, onTab }) {
+export default function Sidebar({ tabs, activeTab, onTab, badges = {} }) {
   return (
     <aside className="w-60 shrink-0 bg-white border-l border-stone-200 hidden md:flex flex-col">
       <div className="px-5 py-5 border-b border-stone-100 flex items-center gap-3">
@@ -32,6 +32,11 @@ export default function Sidebar({ tabs, activeTab, onTab }) {
             >
               <Icon size={18} />
               {t.label}
+              {badges[t.id] > 0 && (
+                <span className="mr-auto min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {badges[t.id]}
+                </span>
+              )}
             </button>
           )
         })}

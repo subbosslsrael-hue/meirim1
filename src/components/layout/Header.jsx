@@ -9,7 +9,7 @@ const ROLE_ICONS = {
   instructor: { Icon: Briefcase, short: 'מדריך/ה', color: 'sky' },
 }
 
-export default function Header({ activeTabLabel, tabs, activeTab, onTab }) {
+export default function Header({ activeTabLabel, tabs, activeTab, onTab, badges = {} }) {
   const { profile, signOut } = useAuth()
   const roleConf = ROLE_ICONS[profile?.role] || ROLE_ICONS.volunteer
   const RoleIcon = roleConf.Icon
@@ -62,6 +62,11 @@ export default function Header({ activeTabLabel, tabs, activeTab, onTab }) {
             >
               <Icon size={14} />
               {t.label}
+              {badges[t.id] > 0 && (
+                <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {badges[t.id]}
+                </span>
+              )}
             </button>
           )
         })}

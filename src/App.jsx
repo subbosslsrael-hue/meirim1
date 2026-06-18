@@ -25,6 +25,7 @@ import TeamPage from './components/team/TeamPage'
 import ChatPage from './components/chat/ChatPage'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
 import WeeklyReportGate from './components/reports/WeeklyReportGate'
+import { useChatUnread } from './hooks/useChatUnread'
 
 const ALL_TABS = [
   { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
@@ -54,6 +55,8 @@ function needsRoleSetup(profile) {
 function AppShell() {
   const [tab, setTab] = useState('dashboard')
   const { profile } = useAuth()
+  const { total: chatUnread } = useChatUnread()
+  const badges = { chat: chatUnread }
 
   const visibleTabs = useMemo(() => {
     const allowed = TABS_BY_ROLE[profile?.role] || []
@@ -71,13 +74,19 @@ function AppShell() {
 
   return (
     <div dir="rtl" className="min-h-screen flex bg-amber-50/40 text-right">
-      <Sidebar tabs={visibleTabs} activeTab={tab} onTab={setTab} />
+      <Sidebar
+        tabs={visibleTabs}
+        activeTab={tab}
+        onTab={setTab}
+        badges={badges}
+      />
       <main className="flex-1 min-w-0">
         <Header
           activeTabLabel={activeTabLabel}
           tabs={visibleTabs}
           activeTab={tab}
           onTab={setTab}
+          badges={badges}
         />
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
           {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}

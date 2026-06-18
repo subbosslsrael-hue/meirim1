@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   CheckCircle2,
   MapPin,
+  Megaphone,
 } from 'lucide-react'
 import {
   BarChart,
@@ -68,10 +69,15 @@ export default function Dashboard({ onNavigate }) {
   const { data: profiles } = useProfiles({ enabled: manager })
 
   const [unreadChats, setUnreadChats] = useState(0)
+  const [announceUnread, setAnnounceUnread] = useState(0)
   useEffect(() => {
     supabase
       .rpc('activities_with_unread')
       .then(({ data }) => setUnreadChats((data || []).length))
+    supabase.rpc('chat_unread_counts').then(({ data }) => {
+      const a = (data || []).find((r) => r.channel === 'announcements')
+      setAnnounceUnread(a?.unread || 0)
+    })
   }, [])
 
   const today = localToday()
@@ -114,6 +120,13 @@ export default function Dashboard({ onNavigate }) {
 
   // ── מה דורש ממני פעולה ──────────────────────────────────────────
   const actions = []
+  if (announceUnread)
+    actions.push({
+      label: `${announceUnread} הודעות מנהלים חדשות`,
+      icon: Megaphone,
+      tab: 'chat',
+      cls: 'bg-rose-100 text-rose-600',
+    })
   if (pendingDebriefs)
     actions.push({
       label: `${pendingDebriefs} תחקורים ממתינים למילוי`,
