@@ -75,7 +75,7 @@ function AppShell() {
           onTab={setTab}
         />
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
-          {tab === 'dashboard' && <Dashboard />}
+          {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
           {tab === 'families' && <FamiliesPage />}
           {tab === 'activities' && <ActivitiesPage />}
           {tab === 'distribution' && <DistributionPage />}
