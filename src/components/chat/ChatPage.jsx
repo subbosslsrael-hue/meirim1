@@ -32,6 +32,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [text, setText] = useState('')
   const [editing, setEditing] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
@@ -40,13 +41,19 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
   const bottomRef = useRef(null)
 
   const load = useCallback(async () => {
-    const { data: msgs } = await supabase
+    const { data: msgs, error } = await supabase
       .from('chat_messages')
       .select(
-        'id, profile_id, content, reply_to, edited, created_at, profile:profiles(id, name)',
+        'id, profile_id, sender_name, content, reply_to, edited, created_at',
       )
       .eq('channel', channel)
       .order('created_at', { ascending: true })
+    if (error) {
+      setLoadError(error.message)
+      setLoading(false)
+      return
+    }
+    setLoadError(null)
     setMessages(msgs || [])
     const ids = (msgs || []).map((m) => m.id)
     if (ids.length) {
@@ -107,6 +114,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
         : await supabase.from('chat_messages').insert({
             channel,
             profile_id: profile.id,
+            sender_name: profile.name,
             content: body,
             reply_to: replyTo?.id || null,
           })
@@ -162,6 +170,8 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
       <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-stone-50 rounded-xl border border-stone-100">
         {loading ? (
           <p className="text-center text-stone-400 text-sm py-6">טוען…</p>
+        ) : loadError ? (
+          <p className="text-center text-rose-600 text-sm py-6">{loadError}</p>
         ) : messages.length === 0 ? (
           <p className="text-center text-stone-400 text-sm py-6">
             אין הודעות עדיין.
@@ -203,7 +213,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
                     >
                       {!mine && (
                         <div className="text-[10px] font-semibold text-emerald-700 mb-0.5">
-                          {m.profile?.name || '—'}
+                          {m.sender_name || '—'}
                         </div>
                       )}
                       {orig && (
@@ -215,7 +225,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
                           }`}
                         >
                           <span className="font-semibold">
-                            {orig.profile?.name}:{' '}
+                            {orig.sender_name}:{' '}
                           </span>
                           {(orig.content || '').slice(0, 60)}
                         </div>
@@ -338,7 +348,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
               <span className="flex-1 text-stone-600 truncate">
                 {editing
                   ? 'עריכת הודעה'
-                  : `מענה ל${replyTo.profile?.name || ''}: ${(replyTo.content || '').slice(0, 40)}`}
+                  : `מענה ל${replyTo.sender_name || ''}: ${(replyTo.content || '').slice(0, 40)}`}
               </span>
               <button
                 onClick={() => {
