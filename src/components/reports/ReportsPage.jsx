@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import { Plus, Package, ChevronDown, ChevronUp, Camera as CameraIcon } from 'lucide-react'
+import {
+  Plus,
+  Package,
+  ChevronDown,
+  ChevronUp,
+  Camera as CameraIcon,
+  ClipboardList,
+  Star,
+} from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -22,6 +30,7 @@ import { useProfiles } from '../../hooks/useProfiles'
 import { useFamilies } from '../../hooks/useFamilies'
 import { useActivities } from '../../hooks/useActivities'
 import { useDistributionArchives } from '../../hooks/useDistributionArchives'
+import { useActivityArchives } from '../../hooks/useActivityArchives'
 import { getDoorPhotoUrl } from '../../lib/storage'
 
 function currentWeek() {
@@ -43,9 +52,11 @@ export default function ReportsPage() {
   const canViewArchives =
     profile?.role === 'admin' || profile?.role === 'service'
   const { data: archives } = useDistributionArchives({ enabled: canViewArchives })
+  const { data: actArchives } = useActivityArchives({ enabled: canViewArchives })
 
   const [open, setOpen] = useState(false)
   const [expandedArchive, setExpandedArchive] = useState(null)
+  const [expandedAct, setExpandedAct] = useState(null)
   const [form, setForm] = useState({
     week: currentWeek(),
     project: PROJECTS[0],
@@ -201,6 +212,81 @@ export default function ReportsPage() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {canViewArchives && actArchives.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardList size={16} className="text-emerald-600" />
+            <h4 className="font-bold text-stone-800 text-sm">
+              תחקורי פעילויות ({actArchives.length})
+            </h4>
+          </div>
+          <div className="space-y-2">
+            {actArchives.map((a) => {
+              const isOpen = expandedAct === a.id
+              return (
+                <div
+                  key={a.id}
+                  className="border border-stone-100 rounded-xl overflow-hidden bg-stone-50/40"
+                >
+                  <button
+                    onClick={() => setExpandedAct(isOpen ? null : a.id)}
+                    className="w-full flex items-center justify-between gap-2 p-3 text-right hover:bg-stone-50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-stone-800 text-sm truncate">
+                        {a.name}
+                      </div>
+                      <div className="text-xs text-stone-500 truncate">
+                        {a.project ? `${a.project} · ` : ''}
+                        {a.activity_date || '—'}
+                        {a.branch?.name ? ` · ${a.branch.name}` : ''}
+                      </div>
+                    </div>
+                    {a.rating ? (
+                      <span className="flex items-center gap-0.5 text-xs font-bold text-amber-500 shrink-0">
+                        <Star size={12} className="fill-amber-400 text-amber-400" />
+                        {a.rating}
+                      </span>
+                    ) : null}
+                    {isOpen ? (
+                      <ChevronUp size={16} className="text-stone-400" />
+                    ) : (
+                      <ChevronDown size={16} className="text-stone-400" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-stone-100 p-3 space-y-2 bg-white text-xs">
+                      {a.location && (
+                        <div className="text-stone-500">מקום: {a.location}</div>
+                      )}
+                      <div className="text-stone-500">
+                        נרשמו: {a.signed_count ?? 0}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-emerald-700 mb-0.5">
+                          מה היה טוב
+                        </div>
+                        <p className="text-stone-600 whitespace-pre-wrap">
+                          {a.what_was_good || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-amber-700 mb-0.5">
+                          מה טעון שיפור
+                        </div>
+                        <p className="text-stone-600 whitespace-pre-wrap">
+                          {a.what_needs_improvement || '—'}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

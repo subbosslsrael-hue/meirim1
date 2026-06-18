@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Star } from 'lucide-react'
+import { Star, Trash2 } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { PROJECTS } from '../../lib/constants'
@@ -32,6 +32,7 @@ export default function ActivityForm({
   defaultBranchId,
   lockBranch = false,
   activity,
+  onDelete,
 }) {
   const isEdit = !!activity
   const [form, setForm] = useState({
@@ -51,6 +52,20 @@ export default function ActivityForm({
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [removing, setRemoving] = useState(false)
+
+  const remove = async () => {
+    setRemoving(true)
+    setError(null)
+    try {
+      await onDelete()
+      onClose()
+    } catch (err) {
+      setError(err.message || 'שגיאה במחיקה')
+      setRemoving(false)
+    }
+  }
 
   const ranked = useMemo(
     () =>
@@ -258,6 +273,40 @@ export default function ActivityForm({
       >
         {busy ? 'שומר…' : 'שמירה'}
       </button>
+
+      {isEdit && onDelete && (
+        <div className="mt-4 pt-4 border-t border-stone-200">
+          <p className="text-xs text-stone-400 mb-2">מחיקת הפעילות</p>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-rose-700 flex-1">
+                למחוק את הפעילות לצמיתות?
+              </span>
+              <button
+                onClick={remove}
+                disabled={removing}
+                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-semibold text-sm"
+              >
+                {removing ? '…' : 'כן, מחק'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                disabled={removing}
+                className="text-xs text-stone-500 hover:text-stone-700 px-2"
+              >
+                ביטול
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-3 py-2 rounded-lg font-semibold text-sm"
+            >
+              <Trash2 size={15} /> מחק פעילות
+            </button>
+          )}
+        </div>
+      )}
     </Modal>
   )
 }

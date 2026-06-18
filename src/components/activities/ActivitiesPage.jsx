@@ -4,7 +4,7 @@ import ActivityCard from './ActivityCard'
 import ActivityForm from './ActivityForm'
 import ActivityChat from './ActivityChat'
 import ActivityParticipants from './ActivityParticipants'
-import DebriefModal from './DebriefModal'
+import ActivityDebrief from './ActivityDebrief'
 import LoadingScreen from '../shared/LoadingScreen'
 import { PROJECTS } from '../../lib/constants'
 import { useAuth } from '../../contexts/AuthContext'
@@ -46,11 +46,6 @@ export default function ActivitiesPage() {
 
   const cycle = async (a) => {
     await activities.update(a.id, { status: NEXT_STATUS[a.status] || 'planning' })
-  }
-
-  const saveDebrief = async (updates) => {
-    if (!debriefing) return
-    await activities.update(debriefing.id, updates)
   }
 
   const handleAdd = async ({ instructorIds, ...rest }) => {
@@ -193,6 +188,9 @@ export default function ActivitiesPage() {
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
           lockBranch={profile?.role === 'service'}
+          onDelete={async () => {
+            await activities.remove(editing.id)
+          }}
         />
       )}
 
@@ -212,10 +210,10 @@ export default function ActivitiesPage() {
       )}
 
       {debriefing && (
-        <DebriefModal
+        <ActivityDebrief
           activity={debriefing}
           onClose={() => setDebriefing(null)}
-          onSave={saveDebrief}
+          onDone={() => activities.mutate()}
         />
       )}
     </div>
