@@ -14,6 +14,21 @@ import { supabase } from '../../lib/supabase'
 
 const PRESET_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏']
 
+const AVATAR_COLORS = [
+  'bg-amber-400',
+  'bg-orange-400',
+  'bg-rose-400',
+  'bg-emerald-400',
+  'bg-sky-400',
+  'bg-violet-400',
+]
+const avatarColor = (name) => {
+  let h = 0
+  for (const c of name || '') h += c.charCodeAt(0)
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+const initial = (name) => (name || '?').trim().charAt(0) || '?'
+
 const dayLabel = (iso) => {
   const d = new Date(iso)
   return d.toLocaleDateString('he-IL', {
@@ -169,15 +184,18 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-220px)] min-h-[420px]">
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-stone-50 rounded-xl border border-stone-100">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gradient-to-b from-amber-50/60 to-orange-50/30 rounded-2xl border border-amber-100/70">
         {loading ? (
           <p className="text-center text-stone-400 text-sm py-6">טוען…</p>
         ) : loadError ? (
           <p className="text-center text-rose-600 text-sm py-6">{loadError}</p>
         ) : messages.length === 0 ? (
-          <p className="text-center text-stone-400 text-sm py-6">
-            אין הודעות עדיין.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 text-stone-400 py-10">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center">
+              <MessagesSquare size={26} />
+            </div>
+            <p className="text-sm">עדיין שקט כאן — תהיו הראשונים לכתוב 💬</p>
+          </div>
         ) : (
           messages.map((m) => {
             const mine = m.profile_id === profile.id
@@ -198,23 +216,36 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
             return (
               <React.Fragment key={m.id}>
                 {showDay && (
-                  <div className="text-center my-2">
-                    <span className="text-[10px] bg-stone-200 text-stone-500 px-2 py-0.5 rounded-full">
+                  <div className="text-center my-3">
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-medium">
                       {day}
                     </span>
                   </div>
                 )}
-                <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className="max-w-[80%]">
+                <div
+                  className={`flex items-end gap-2 ${
+                    mine ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {!mine && (
                     <div
-                      className={`rounded-2xl px-3 py-2 ${
+                      className={`w-7 h-7 rounded-full ${avatarColor(
+                        m.sender_name,
+                      )} text-white text-xs font-bold flex items-center justify-center shrink-0`}
+                    >
+                      {initial(m.sender_name)}
+                    </div>
+                  )}
+                  <div className="max-w-[78%]">
+                    <div
+                      className={`px-3 py-2 shadow-sm ${
                         mine
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-white border border-stone-200 text-stone-700'
+                          ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl rounded-bl-md'
+                          : 'bg-white border border-amber-100 text-stone-700 rounded-2xl rounded-br-md'
                       }`}
                     >
                       {!mine && (
-                        <div className="text-[10px] font-semibold text-emerald-700 mb-0.5">
+                        <div className="text-[10px] font-bold text-orange-600 mb-0.5">
                           {m.sender_name || '—'}
                         </div>
                       )}
@@ -222,8 +253,8 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
                         <div
                           className={`text-[11px] border-r-2 pr-2 mb-1 rounded ${
                             mine
-                              ? 'border-white/50 text-emerald-50'
-                              : 'border-stone-300 text-stone-400'
+                              ? 'border-white/60 text-amber-50'
+                              : 'border-amber-300 text-stone-400'
                           }`}
                         >
                           <span className="font-semibold">
@@ -242,7 +273,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
                       </div>
                       <div
                         className={`text-[9px] mt-0.5 ${
-                          mine ? 'text-emerald-100' : 'text-stone-400'
+                          mine ? 'text-amber-50/90' : 'text-stone-400'
                         }`}
                       >
                         {timeLabel(m.created_at)}
@@ -263,7 +294,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
                             onClick={() => toggleReaction(m.id, emoji)}
                             className={`text-[11px] px-1.5 py-0.5 rounded-full border ${
                               g.mine
-                                ? 'bg-emerald-50 border-emerald-300'
+                                ? 'bg-amber-100 border-amber-300'
                                 : 'bg-white border-stone-200'
                             }`}
                           >
@@ -346,7 +377,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
       {canPost ? (
         <div className="mt-2">
           {(replyTo || editing) && (
-            <div className="flex items-center gap-2 text-xs bg-stone-100 rounded-lg px-3 py-1.5 mb-1">
+            <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 mb-1">
               <span className="flex-1 text-stone-600 truncate">
                 {editing
                   ? 'עריכת הודעה'
@@ -375,19 +406,20 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
                 }
               }}
               placeholder="כתוב הודעה…"
-              className="flex-1 px-3 py-2.5 rounded-xl border border-stone-200 bg-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="flex-1 px-4 py-2.5 rounded-full border border-amber-200 bg-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
             />
             <button
               onClick={send}
               disabled={busy || !text.trim()}
-              className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white shrink-0"
+              className="p-2.5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 disabled:opacity-40 text-white shrink-0 shadow"
             >
               <Send size={18} />
             </button>
           </div>
         </div>
       ) : (
-        <div className="mt-2 text-center text-sm text-stone-400 bg-stone-50 border border-stone-100 rounded-xl py-3">
+        <div className="mt-2 text-center text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl py-3 flex items-center justify-center gap-1.5">
+          <Megaphone size={15} />
           רק מנכ״ל ובנות שירות יכולים לפרסם בערוץ זה.
         </div>
       )}
