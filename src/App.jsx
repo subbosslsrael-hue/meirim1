@@ -88,7 +88,7 @@ function AppShell() {
       {['admin', 'service', 'instructor'].includes(profile?.role) && (
         <PendingDebriefGate />
       )}
-      {profile?.role === 'service' && <WeeklyReportGate />}
+      {['service', 'instructor'].includes(profile?.role) && <WeeklyReportGate />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ClipboardList, CheckCircle2, AlertTriangle } from 'lucide-react'
 import Card from '../shared/Card'
+import { currentReportWeek } from '../../lib/week'
 
 const ROLE_LABEL = {
   service: 'בת שירות',
@@ -10,12 +11,15 @@ const ROLE_LABEL = {
 }
 
 export default function ComplianceTracker({ reports, profiles }) {
+  const thisWeek = currentReportWeek()
   const allWeeks = useMemo(() => {
     const s = new Set(reports.map((r) => r.week))
+    s.add(thisWeek) // תמיד כולל את השבוע הנוכחי, גם אם עוד אין בו דיווחים
     return [...s].sort().reverse()
-  }, [reports])
+  }, [reports, thisWeek])
 
-  const [week, setWeek] = useState(allWeeks[0] || '')
+  // ברירת מחדל: השבוע הנוכחי (ולא השבוע האחרון שיש בו דיווח)
+  const [week, setWeek] = useState(thisWeek)
 
   const people = useMemo(
     () =>
