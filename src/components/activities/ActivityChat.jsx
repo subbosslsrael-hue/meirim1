@@ -10,16 +10,8 @@ export default function ActivityChat({ activity, currentProfile, onClose }) {
   const [error, setError] = useState(null)
   const bottomRef = useRef(null)
 
-  const markRead = () => {
-    supabase.from('activity_chat_reads').upsert(
-      {
-        activity_id: activity.id,
-        profile_id: currentProfile.id,
-        last_read_at: new Date().toISOString(),
-      },
-      { onConflict: 'activity_id,profile_id' },
-    )
-  }
+  const markRead = () =>
+    supabase.rpc('mark_activity_read', { p_activity_id: activity.id })
 
   const load = async () => {
     const { data, error: err } = await supabase

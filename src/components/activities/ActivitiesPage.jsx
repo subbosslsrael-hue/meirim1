@@ -224,8 +224,10 @@ export default function ActivitiesPage() {
         <ActivityChat
           activity={chatting}
           currentProfile={profile}
-          onClose={() => {
+          onClose={async () => {
+            const id = chatting.id
             setChatting(null)
+            await supabase.rpc('mark_activity_read', { p_activity_id: id })
             loadUnread()
           }}
         />
