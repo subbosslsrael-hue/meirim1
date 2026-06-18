@@ -36,7 +36,8 @@ const ALL_TABS = [
 
 const TABS_BY_ROLE = {
   admin: ALL_TABS.map((t) => t.id),
-  service: ALL_TABS.map((t) => t.id),
+  // בת שירות רואה הכל מלבד "אפיון ותיעוד" (למנכ"ל בלבד)
+  service: ALL_TABS.map((t) => t.id).filter((id) => id !== 'docs'),
   instructor: ['dashboard', 'activities', 'distribution', 'reports'],
   volunteer: ['dashboard', 'activities', 'distribution'],
 }

@@ -1,96 +1,76 @@
 import React from 'react'
 import {
-  Database,
-  Workflow,
-  Cpu,
-  BookOpen,
+  LayoutDashboard,
+  Users,
+  CalendarHeart,
+  Truck,
+  Contact,
+  ClipboardList,
+  ShieldCheck,
+  Archive,
   TrendingUp,
+  Database,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import { useFamilies } from '../../hooks/useFamilies'
 import { useActivities } from '../../hooks/useActivities'
 import { useReports } from '../../hooks/useReports'
+import { useProfiles } from '../../hooks/useProfiles'
 
-const ENTITIES = [
-  { e: 'BRANCH', he: 'סניף', fields: 'id, name, city' },
+const MODULES = [
   {
-    e: 'PROFILE',
-    he: 'פרופיל משתמש',
-    fields: 'id↗auth.users, name, role, phone, branch_id↗, skills',
+    icon: LayoutDashboard,
+    title: 'לוח בקרה',
+    desc: 'מסך הפתיחה האישי. מציג לכל משתמש "מה דורש ממנו פעולה" (תחקורים שצריך למלא, צ׳אטים עם הודעות חדשות, יעדי חלוקה שטרם נמסרו), נתונים מותאמים לתפקיד וקיצורי דרך מהירים.',
   },
   {
-    e: 'FAMILY',
-    he: 'משפחה נתמכת',
-    fields: 'id, name, need_category, branch_id↗, responsible_profile_id↗, lat, lng, door_photo_url',
+    icon: Users,
+    title: 'ניהול משפחות',
+    desc: 'מאגר המשפחות הנתמכות — הוספה ועריכה של פרטים, הערות, שיוך בת שירות אחראית, ייבוא מאקסל, וחילוף אחריות מרוכז בין בנות שירות. כל משפחה כוללת כתובת על המפה וטלפון תקין.',
   },
   {
-    e: 'ACTIVITY',
-    he: 'פעילות',
-    fields: 'id, name, project, activity_date, status, cost, branch_id↗, rating',
+    icon: CalendarHeart,
+    title: 'פעילויות ומדריכים',
+    desc: 'תכנון פעילויות (תיאור, יום, שעה, מקום), שיבוץ מדריכים לפי כישורים, הרשמת מתנדבים, וצ׳אט נפרד לכל פעילות עם סימון הודעות חדשות. יוצר הפעילות ובת השירות רואים את פרטי הנרשמים. יום אחרי שהפעילות מתקיימת — חובת תחקור שנשמר בדיווחים.',
   },
   {
-    e: 'ACTIVITY_INSTRUCTOR',
-    he: 'שיבוץ מדריך (N:N)',
-    fields: 'activity_id↗, profile_id↗',
+    icon: Truck,
+    title: 'חלוקת מוצרים',
+    desc: 'ניהול חלוקות סלי מזון על מפה אמיתית עם מסלול נסיעה מותאם. מתנדבים "לוקחים" יעדים, מנווטים בוויז, מסמנים מסירה ומצלמים את פתח הבית. בסיום החלוקה — ארכוב אוטומטי לסיכום.',
   },
   {
-    e: 'ACTIVITY_PARTICIPANT',
-    he: 'הרשמת מתנדב (N:N)',
-    fields: 'activity_id↗, profile_id↗',
+    icon: Contact,
+    title: 'צוות',
+    desc: 'רשימת כל אנשי הצוות — בנות שירות, מדריכים ומתנדבים — עם טלפון, גיל וסניף. המנכ"ל רואה את כולם; בת שירות רואה את צוות הסניף שלה.',
   },
   {
-    e: 'DISTRIBUTION',
-    he: 'חלוקה',
-    fields: 'id, name, dist_date, items, branch_id↗',
-  },
-  {
-    e: 'DISTRIBUTION_STOP',
-    he: 'יעד חלוקה',
-    fields: 'id, distribution_id↗, family_id↗, delivered, photo_url, claimed_by↗',
-  },
-  {
-    e: 'ACTIVITY_REPORT',
-    he: 'דיווח שבועי',
-    fields: 'id, profile_id↗, week, project, hours',
+    icon: ClipboardList,
+    title: 'דיווחים ומעקב',
+    desc: 'דיווח שעות שבועי לפי פעילות עם סיכום שבועי, מעקב מי מילא את הדיווח, וארכיון קבוע של סיכומי חלוקות ותחקורי פעילויות. בנות שירות ומדריכים חייבים למלא דיווח בכל שבוע.',
   },
 ]
 
-const MAPPING = [
+const ROLES = [
   {
-    p: 'ניהול משפחות',
-    solves: 'עבודה כפולה ואובדן מידע מקובצי אקסל',
-    how: 'קליטה ישירה לשדות קבועים מראש + RLS לפי סניף',
+    role: 'מנכ״ל',
+    desc: 'גישה מלאה לכל המערכת ולכל הסניפים, כולל שעות מדווחות, צוות מלא, ועמוד אפיון זה.',
+    cls: 'bg-emerald-50 text-emerald-700 border-emerald-100',
   },
   {
-    p: 'שיבוץ מדריכים לפי קטגוריה',
-    solves: 'אובדן זיכרון ארגוני וכאוס דיווח',
-    how: 'ניהול פעילות מתכנון ועד תחקור, מקושר לכישורים',
+    role: 'בת שירות',
+    desc: 'ניהול הסניף שלה — משפחות, פעילויות, חלוקות וצוות הסניף. חייבת למלא דיווח שבועי.',
+    cls: 'bg-amber-50 text-amber-700 border-amber-100',
   },
   {
-    p: 'שיוך אוטומטי משפחה–בת שירות',
-    solves: 'החלפות אחריות שנתיות לא מתועדות',
-    how: 'חילוף מרוכז עם עדכון אוטומטי בכל הטבלאות',
+    role: 'מדריך',
+    desc: 'יצירה וניהול של פעילויות, צ׳אט עם הנרשמים, ותחקור. חייב למלא דיווח שבועי.',
+    cls: 'bg-sky-50 text-sky-700 border-sky-100',
   },
   {
-    p: 'חלוקה על מפת GIS + צילום',
-    solves: 'חוסר יעילות לוגיסטי ואיחורים',
-    how: 'Leaflet+OSM, גיאוקוד דרך Nominatim, אופטימיזציית מסלול, תמונת פתח',
+    role: 'מתנדב',
+    desc: 'הרשמה לפעילויות, לקיחת יעדי חלוקה, סימון מסירה וצילום פתח-בית.',
+    cls: 'bg-orange-50 text-orange-700 border-orange-100',
   },
-  {
-    p: 'דיווח שבועי + עיבוד אוטומטי',
-    solves: 'היעדר נתונים כמותיים לניהול',
-    how: 'מדדי תפוקה ושעות לפי פרויקט בזמן אמת (Realtime Supabase)',
-  },
-]
-
-const LITERATURE = [
-  'מערכות CRM וניהול קשרי מתנדבים במגזר השלישי (Third-Sector / Nonprofit IS)',
-  'מתודולוגיית DMAIC ו-Six Sigma לשיפור תהליכים',
-  'תקן מידול תהליכים BPMN 2.0 (OMG) להשוואת As-Is מול To-Be',
-  'בעיית ניתוב כלי רכב (Vehicle Routing Problem) ו-GIS בלוגיסטיקה הומניטרית',
-  'ניהול ידע ארגוני (Knowledge Management) ומניעת אובדן ידע שבטי',
-  'חקר עבודה ומדידת זמנים (Work Study / Time Study)',
-  'עקרונות חווית משתמש (UX) ונגישות בממשקי RTL בעברית',
 ]
 
 const Section = ({ icon: Icon, title, children }) => (
@@ -107,118 +87,93 @@ export default function DocsPage() {
   const { data: families } = useFamilies()
   const { data: activities } = useActivities()
   const { data: reports } = useReports()
+  const { data: profiles } = useProfiles()
   const totalHours = reports.reduce((s, r) => s + Number(r.hours || 0), 0)
+  const teamCount = profiles.filter((p) => p.role !== 'admin').length
 
   return (
     <div className="space-y-5">
       <Card className="p-5 bg-gradient-to-l from-amber-50 to-emerald-50 border-amber-100">
         <h2 className="font-display text-xl font-black text-emerald-800 mb-1">
-          אפיון המערכת ותיעוד הנדסי
+          על המערכת — מדריך מנהלים
         </h2>
         <p className="text-sm text-stone-600">
-          מסמך חי המסכם את מודל הנתונים, התהליכים, מדדי הביצוע, המתודולוגיה
-          ההנדסית וכיווני סקירת הספרות של פרויקט הגמר בעמותת מאירים.
+          מערכת "מאירים" מרכזת במקום אחד את כל הפעילות של העמותה: ניהול
+          המשפחות הנתמכות, הפעילויות והמדריכים, חלוקות סלי המזון, הצוות
+          והדיווחים. המסמך הזה מסביר בקצרה מה כל חלק עושה ומי רשאי לגשת אליו.
         </p>
       </Card>
 
-      <Section icon={Database} title="ישויות מסד הנתונים (ERD)">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-stone-500 bg-stone-50">
-              <tr>
-                <th className="text-right px-3 py-2 font-semibold">ישות</th>
-                <th className="text-right px-3 py-2 font-semibold">תיאור</th>
-                <th className="text-right px-3 py-2 font-semibold">
-                  שדות עיקריים (↗ = מפתח זר)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {ENTITIES.map((x) => (
-                <tr key={x.e} className="border-t border-stone-100">
-                  <td className="px-3 py-2 font-mono text-xs text-emerald-700 font-bold">
-                    {x.e}
-                  </td>
-                  <td className="px-3 py-2 text-stone-700">{x.he}</td>
-                  <td className="px-3 py-2 text-stone-500 text-xs">{x.fields}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Section icon={LayoutDashboard} title="המודולים במערכת">
+        <div className="space-y-3">
+          {MODULES.map((m) => {
+            const Icon = m.icon
+            return (
+              <div key={m.title} className="flex gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Icon size={20} />
+                </div>
+                <div>
+                  <div className="font-bold text-stone-800 text-sm">
+                    {m.title}
+                  </div>
+                  <p className="text-sm text-stone-600 mt-0.5">{m.desc}</p>
+                </div>
+              </div>
+            )
+          })}
         </div>
-        <p className="text-[11px] text-stone-400 mt-2">
-          9 ישויות, 2 קשרי רבים-לרבים (שיבוץ מדריכים, הרשמת מתנדבים, יעדי חלוקה).
-          RLS פעיל על כל הטבלאות לפי תפקיד וסניף.
-        </p>
       </Section>
 
-      <Section icon={Workflow} title="מיפוי תהליכים לבעיות ההנדסיות">
-        <div className="space-y-2">
-          {MAPPING.map((m, i) => (
+      <Section icon={ShieldCheck} title="מי רואה מה — תפקידים והרשאות">
+        <div className="grid md:grid-cols-2 gap-3">
+          {ROLES.map((r) => (
             <div
-              key={i}
-              className="grid md:grid-cols-3 gap-2 p-3 rounded-xl bg-stone-50/70 border border-stone-100 text-sm"
+              key={r.role}
+              className={`p-3 rounded-xl border ${r.cls}`}
             >
-              <div className="font-bold text-emerald-700">{m.p}</div>
-              <div className="text-stone-500">
-                <span className="text-rose-500 font-semibold">פותר: </span>
-                {m.solves}
-              </div>
-              <div className="text-stone-600">
-                <span className="text-amber-600 font-semibold">כיצד: </span>
-                {m.how}
-              </div>
+              <div className="font-bold text-sm mb-0.5">{r.role}</div>
+              <p className="text-xs text-stone-600">{r.desc}</p>
             </div>
           ))}
         </div>
+        <p className="text-[11px] text-stone-400 mt-3">
+          ההרשאות נאכפות גם בשרת — כל משתמש רואה ועורך רק את מה שמותר לתפקידו
+          ולסניפו, גם אם ינסה לעקוף את הממשק.
+        </p>
       </Section>
 
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Section icon={Cpu} title="מתודולוגיה וטכנולוגיה">
-          <ul className="space-y-2 text-sm text-stone-700">
-            <li className="flex gap-2">
-              <span className="text-amber-500 font-bold">DMAIC</span> — חקר
-              המצב הקיים ומדידת זמני עבודה
-            </li>
-            <li className="flex gap-2">
-              <span className="text-amber-500 font-bold">BPMN</span> — מידול
-              והשוואת מצב קיים מול מוצע
-            </li>
-            <li className="flex gap-2">
-              <span className="text-amber-500 font-bold">DFD + ERD</span> —
-              ניתוח זרימת נתונים ועיצוב מסד הנתונים
-            </li>
-            <li className="flex gap-2">
-              <span className="text-emerald-600 font-bold">React + Vite</span> —
-              צד לקוח (חווית משתמש)
-            </li>
-            <li className="flex gap-2">
-              <span className="text-emerald-600 font-bold">Supabase</span> —
-              PostgreSQL, Auth, Storage, Realtime
-            </li>
-            <li className="flex gap-2">
-              <span className="text-emerald-600 font-bold">Leaflet + OSM</span>{' '}
-              — תכנון מסלולי חלוקה
-            </li>
-          </ul>
-        </Section>
+      <Section icon={Archive} title="מה המערכת שומרת לתמיד">
+        <ul className="space-y-2 text-sm text-stone-700">
+          <li className="flex gap-2">
+            <Truck size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+            <span>
+              <b>סיכומי חלוקות שהושלמו</b> — מי קיבל, מתי, וצילומי המסירה.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <ClipboardList size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+            <span>
+              <b>תחקורי פעילויות</b> — מה היה טוב ומה לשפר לפעם הבאה, כולל קבצים
+              מצורפים לשימוש חוזר.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <ClipboardList size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+            <span>
+              <b>דיווחי השעות השבועיים</b> — לכל מדריך ובת שירות, לפי פעילות.
+            </span>
+          </li>
+        </ul>
+      </Section>
 
-        <Section icon={BookOpen} title="כיווני סקירת ספרות">
-          <ul className="space-y-1.5 text-sm text-stone-700 list-disc pr-5">
-            {LITERATURE.map((l, i) => (
-              <li key={i}>{l}</li>
-            ))}
-          </ul>
-        </Section>
-      </div>
-
-      <Section icon={TrendingUp} title="מדדי ביצוע (KPIs) שהמערכת מפיקה">
+      <Section icon={TrendingUp} title="המערכת במספרים (כעת)">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
           {[
             { v: families.length, l: 'משפחות מנוהלות' },
+            { v: activities.length, l: 'פעילויות פעילות' },
+            { v: teamCount, l: 'אנשי צוות' },
             { v: totalHours, l: 'שעות מדווחות' },
-            { v: activities.length, l: 'פעילויות' },
-            { v: 'GIS', l: 'אופטימיזציית מסלול' },
           ].map((k, i) => (
             <div
               key={i}
@@ -231,6 +186,14 @@ export default function DocsPage() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section icon={Database} title="על מה המערכת בנויה">
+        <p className="text-sm text-stone-600">
+          המערכת פועלת בדפדפן ובנייד (ללא התקנה), והמידע נשמר בענן מאובטח
+          (Supabase / PostgreSQL) עם גיבוי, עדכון חי בין משתמשים, והרשאות לפי
+          תפקיד. המפות והניווט מבוססים על שירותי מפות פתוחים.
+        </p>
       </Section>
     </div>
   )
