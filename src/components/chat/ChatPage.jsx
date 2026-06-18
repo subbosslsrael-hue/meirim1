@@ -183,7 +183,7 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
   let lastDay = null
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[420px]">
+    <div className="flex flex-col h-[calc(100dvh-150px)] md:h-[calc(100vh-220px)] md:min-h-[420px]">
       <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gradient-to-b from-amber-50/60 to-orange-50/30 rounded-2xl border border-amber-100/70">
         {loading ? (
           <p className="text-center text-stone-400 text-sm py-6">טוען…</p>
