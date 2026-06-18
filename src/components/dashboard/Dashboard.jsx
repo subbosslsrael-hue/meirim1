@@ -63,7 +63,7 @@ export default function Dashboard({ onNavigate }) {
 
   const { data: families } = useFamilies({ enabled: manager })
   const { data: activities } = useActivities()
-  const { data: reports } = useReports({ enabled: manager })
+  const { data: reports } = useReports({ enabled: isAdmin })
   const { data: distributions } = useDistributions()
   const { data: profiles } = useProfiles({ enabled: manager })
 
@@ -147,6 +147,9 @@ export default function Dashboard({ onNavigate }) {
   const volunteerCount = profiles.filter((p) => p.role === 'volunteer').length
   const instructorCount = profiles.filter((p) => p.role === 'instructor').length
   const totalHours = reports.reduce((s, r) => s + Number(r.hours || 0), 0)
+  const upcomingCount = activities.filter(
+    (a) => a.activity_date && a.activity_date >= today,
+  ).length
 
   const hoursByProject = useMemo(() => {
     const m = {}
@@ -226,6 +229,7 @@ export default function Dashboard({ onNavigate }) {
             <Stat icon={Activity} label="פעילויות פעילות" value={activities.length} tone="green" />
             <Stat icon={HandHeart} label="מתנדבים" value={volunteerCount} tone="rose" />
             <Stat icon={Briefcase} label="מדריכים" value={instructorCount} tone="blue" />
+            <Stat icon={Clock} label="סה״כ שעות מדווחות" value={totalHours} tone="blue" />
           </>
         )}
         {isService && (
@@ -233,7 +237,7 @@ export default function Dashboard({ onNavigate }) {
             <Stat icon={Users} label="משפחות בסניף" value={families.length} tone="amber" />
             <Stat icon={Activity} label="פעילויות בסניף" value={activities.length} tone="green" />
             <Stat icon={HandHeart} label="מתנדבים בסניף" value={volunteerCount} tone="rose" />
-            <Stat icon={Clock} label="שעות מדווחות" value={totalHours} tone="blue" />
+            <Stat icon={CalendarHeart} label="פעילויות קרובות" value={upcomingCount} tone="blue" />
           </>
         )}
         {role === 'instructor' && (
@@ -268,29 +272,31 @@ export default function Dashboard({ onNavigate }) {
       {/* תובנות לפי תפקיד */}
       {manager ? (
         <>
-          <div className="grid lg:grid-cols-2 gap-5">
-            <Card className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={18} className="text-amber-500" />
-                <h3 className="font-bold text-stone-800">
-                  שעות פעילות לפי פרויקט
-                </h3>
-              </div>
-              <div style={{ height: 240 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={hoursByProject}
-                    margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0ece4" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#78716c' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#78716c' }} />
-                    <Tooltip />
-                    <Bar dataKey="שעות" radius={[6, 6, 0, 0]} fill="#E8920C" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
+          <div className={`grid gap-5 ${isAdmin ? 'lg:grid-cols-2' : ''}`}>
+            {isAdmin && (
+              <Card className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={18} className="text-amber-500" />
+                  <h3 className="font-bold text-stone-800">
+                    שעות פעילות לפי פרויקט
+                  </h3>
+                </div>
+                <div style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={hoursByProject}
+                      margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0ece4" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#78716c' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#78716c' }} />
+                      <Tooltip />
+                      <Bar dataKey="שעות" radius={[6, 6, 0, 0]} fill="#E8920C" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            )}
 
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-4">
