@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Sun,
   ShieldCheck,
@@ -43,6 +43,36 @@ export default function Header({
     onTab(id)
     setOpen(false)
   }
+
+  // פתיחה/סגירה של התפריט בהחלקה (swipe) במובייל
+  useEffect(() => {
+    let startX = null
+    let startY = null
+    const onStart = (e) => {
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+    }
+    const onEnd = (e) => {
+      if (startX == null) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // החלקה שמאלה מהקצה הימני → פתיחה
+        if (!open && startX > window.innerWidth - 40 && dx < -60) setOpen(true)
+        // החלקה ימינה כשפתוח → סגירה
+        else if (open && dx > 60) setOpen(false)
+      }
+      startX = null
+    }
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [open])
 
   return (
     <>
