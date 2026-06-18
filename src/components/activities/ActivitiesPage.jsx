@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import ActivityCard from './ActivityCard'
 import ActivityForm from './ActivityForm'
 import ActivityChat from './ActivityChat'
+import ActivityParticipants from './ActivityParticipants'
 import DebriefModal from './DebriefModal'
 import LoadingScreen from '../shared/LoadingScreen'
 import { PROJECTS } from '../../lib/constants'
@@ -30,6 +31,7 @@ export default function ActivitiesPage() {
   const [openAdd, setOpenAdd] = useState(false)
   const [editing, setEditing] = useState(null)
   const [chatting, setChatting] = useState(null)
+  const [viewingParticipants, setViewingParticipants] = useState(null)
   const [debriefing, setDebriefing] = useState(null)
 
   if (activities.loading) return <LoadingScreen message="טוען פעילויות…" />
@@ -161,6 +163,7 @@ export default function ActivitiesPage() {
             onToggleSignup={toggleSignup}
             onEdit={setEditing}
             onChat={setChatting}
+            onParticipants={setViewingParticipants}
           />
         ))}
         {list.length === 0 && (
@@ -198,6 +201,13 @@ export default function ActivitiesPage() {
           activity={chatting}
           currentProfile={profile}
           onClose={() => setChatting(null)}
+        />
+      )}
+
+      {viewingParticipants && (
+        <ActivityParticipants
+          activity={viewingParticipants}
+          onClose={() => setViewingParticipants(null)}
         />
       )}
 

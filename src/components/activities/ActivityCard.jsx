@@ -34,6 +34,7 @@ export default function ActivityCard({
   onToggleSignup,
   onEdit,
   onChat,
+  onParticipants,
 }) {
   const instructorNames = (activity.instructors || [])
     .map((row) => row.profile?.name)
@@ -46,6 +47,12 @@ export default function ActivityCard({
   const signedCount = (activity.participants_list || []).length
 
   const isVolunteer = currentProfile?.role === 'volunteer'
+  // צפייה בפרטי הנרשמים: מנהל, יוצר הפעילות, או בת השירות של הסניף.
+  const canSeeParticipants =
+    currentProfile?.role === 'admin' ||
+    activity.created_by === currentProfile?.id ||
+    (currentProfile?.role === 'service' &&
+      activity.branch_id === currentProfile?.branch_id)
   // גישה לצ׳אט: מנהל, יוצר הפעילות, בת שירות של הסניף, מדריך משובץ, או מתנדב רשום.
   const canChat =
     currentProfile?.role === 'admin' ||
@@ -127,7 +134,9 @@ export default function ActivityCard({
                 )}
               </div>
             )}
-          {((isVolunteer && activity.status !== 'done') || canChat) && (
+          {((isVolunteer && activity.status !== 'done') ||
+            canChat ||
+            canSeeParticipants) && (
             <div className="mt-3 flex flex-wrap gap-2">
               {isVolunteer && activity.status !== 'done' && (
                 <button
@@ -139,6 +148,14 @@ export default function ActivityCard({
                   }`}
                 >
                   {signedUp ? '✓ נרשמת — לחץ לביטול' : '+ אני נרשם/ת'}
+                </button>
+              )}
+              {canSeeParticipants && onParticipants && (
+                <button
+                  onClick={() => onParticipants(activity)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200 flex items-center gap-1"
+                >
+                  <Users size={14} /> נרשמים ({signedCount})
                 </button>
               )}
               {canChat && onChat && (
