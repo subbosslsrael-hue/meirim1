@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 
 const BUCKET = 'door-photos'
+const ACTIVITY_BUCKET = 'activity-files'
 // תוקף הקישור החתום בשניות (שעה). מספיק לצפייה, פג מעצמו.
 const SIGNED_TTL = 60 * 60
 
@@ -85,6 +86,51 @@ export async function getDoorPhotoUrl(pathOrUrl) {
     .createSignedUrl(path, SIGNED_TTL)
   if (error) {
     console.warn('לא ניתן לייצר קישור לתמונת דלת:', error.message)
+    return null
+  }
+  return data.signedUrl
+}
+
+/**
+ * מעלה קובץ כללי של תחקור פעילות ל-activity-files/{activityId}/{timestamp}-{name}.
+ * מחזיר את הנתיב. הבאקט פרטי — צפייה דרך getActivityFileUrl.
+ */
+export async function uploadActivityFile({ activityId, file }) {
+  if (!file) throw new Error('לא נבחר קובץ')
+  const safe = (file.name || 'file').replace(/[^\w.\-]+/g, '_')
+  const path = `${activityId}/${Date.now()}-${safe}`
+
+  const { error } = await supabase.storage
+    .from(ACTIVITY_BUCKET)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'application/octet-stream',
+    })
+  if (error) throw error
+
+  return path
+}
+
+// מוחק קובץ תחקור מה-Storage (לפני שמירה, אם המשתמש הסיר אותו).
+export async function removeActivityFile(path) {
+  if (!path) return
+  await supabase.storage.from(ACTIVITY_BUCKET).remove([path])
+}
+
+// מחזיר קישור חתום זמני להורדת/צפיית קובץ תחקור.
+export async function getActivityFileUrl(pathOrUrl) {
+  if (!pathOrUrl) return null
+  let path = pathOrUrl
+  const marker = `/${ACTIVITY_BUCKET}/`
+  const idx = pathOrUrl.indexOf(marker)
+  if (idx !== -1) path = pathOrUrl.slice(idx + marker.length).split('?')[0]
+
+  const { data, error } = await supabase.storage
+    .from(ACTIVITY_BUCKET)
+    .createSignedUrl(path, SIGNED_TTL)
+  if (error) {
+    console.warn('לא ניתן לייצר קישור לקובץ תחקור:', error.message)
     return null
   }
   return data.signedUrl

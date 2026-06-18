@@ -7,6 +7,7 @@ import {
   Camera as CameraIcon,
   ClipboardList,
   Star,
+  Paperclip,
 } from 'lucide-react'
 import {
   BarChart,
@@ -31,7 +32,7 @@ import { useFamilies } from '../../hooks/useFamilies'
 import { useActivities } from '../../hooks/useActivities'
 import { useDistributionArchives } from '../../hooks/useDistributionArchives'
 import { useActivityArchives } from '../../hooks/useActivityArchives'
-import { getDoorPhotoUrl } from '../../lib/storage'
+import { getDoorPhotoUrl, getActivityFileUrl } from '../../lib/storage'
 
 function currentWeek() {
   const d = new Date()
@@ -287,6 +288,31 @@ export default function ReportsPage() {
                           {a.what_needs_improvement || '—'}
                         </p>
                       </div>
+                      {a.files?.length > 0 && (
+                        <div>
+                          <div className="font-semibold text-stone-700 mb-1">
+                            קבצים מצורפים
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {a.files.map((f, fi) => (
+                              <button
+                                key={fi}
+                                type="button"
+                                onClick={async () => {
+                                  const w = window.open('about:blank', '_blank')
+                                  const u = await getActivityFileUrl(f.path)
+                                  if (u && w) w.location.href = u
+                                  else if (w) w.close()
+                                }}
+                                className="flex items-center gap-1 text-sky-700 bg-sky-50 border border-sky-200 rounded-lg px-2 py-1 hover:bg-sky-100"
+                              >
+                                <Paperclip size={12} />
+                                {f.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

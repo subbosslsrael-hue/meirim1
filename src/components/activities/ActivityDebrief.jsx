@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
-import { Star, ClipboardList } from 'lucide-react'
+import React, { useRef, useState } from 'react'
+import { Star, ClipboardList, Paperclip, X, Loader2 } from 'lucide-react'
 import Field, { inputCls } from '../shared/Field'
 import { supabase } from '../../lib/supabase'
+import {
+  uploadActivityFile,
+  removeActivityFile,
+} from '../../lib/storage'
 
 export default function ActivityDebrief({
   activity,
@@ -12,8 +16,34 @@ export default function ActivityDebrief({
   const [rating, setRating] = useState(activity.rating || 0)
   const [good, setGood] = useState('')
   const [improve, setImprove] = useState('')
+  const [files, setFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const fileRef = useRef(null)
+
+  const onFiles = async (e) => {
+    const chosen = Array.from(e.target.files || [])
+    if (!chosen.length) return
+    setUploading(true)
+    setError(null)
+    try {
+      for (const file of chosen) {
+        const path = await uploadActivityFile({ activityId: activity.id, file })
+        setFiles((prev) => [...prev, { path, name: file.name }])
+      }
+    } catch (err) {
+      setError(err.message || 'שגיאה בהעלאת קובץ')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  const removeFile = async (path) => {
+    setFiles((prev) => prev.filter((f) => f.path !== path))
+    removeActivityFile(path)
+  }
 
   const submit = async () => {
     if (!good.trim()) {
@@ -32,6 +62,7 @@ export default function ActivityDebrief({
         p_good: good.trim(),
         p_improve: improve.trim(),
         p_rating: rating || null,
+        p_files: files,
       })
       if (err) throw err
       onDone?.()
@@ -99,6 +130,50 @@ export default function ActivityDebrief({
           />
         </Field>
 
+        <Field label="קבצים מצורפים (לשימוש בפעם הבאה)">
+          <div className="space-y-1.5">
+            {files.map((f) => (
+              <div
+                key={f.path}
+                className="flex items-center gap-2 text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5"
+              >
+                <Paperclip size={14} className="text-stone-400 shrink-0" />
+                <span className="flex-1 truncate text-stone-700">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(f.path)}
+                  className="text-stone-400 hover:text-rose-600"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-stone-300 text-stone-500 text-sm hover:bg-stone-50 disabled:opacity-50"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" /> מעלה…
+                </>
+              ) : (
+                <>
+                  <Paperclip size={15} /> הוספת קובץ
+                </>
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              onChange={onFiles}
+              className="hidden"
+            />
+          </div>
+        </Field>
+
         {error && (
           <div className="text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl text-sm mb-2">
             {error}
@@ -117,7 +192,7 @@ export default function ActivityDebrief({
           )}
           <button
             onClick={submit}
-            disabled={busy}
+            disabled={busy || uploading}
             className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold"
           >
             {busy ? 'שומר…' : 'שמירת תחקור וסיום'}
