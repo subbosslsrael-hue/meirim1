@@ -99,22 +99,24 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
     if (!body) return
     setBusy(true)
     try {
-      if (editing) {
-        await supabase
-          .from('chat_messages')
-          .update({ content: body, edited: true })
-          .eq('id', editing.id)
-      } else {
-        await supabase.from('chat_messages').insert({
-          channel,
-          profile_id: profile.id,
-          content: body,
-          reply_to: replyTo?.id || null,
-        })
-      }
+      const { error } = editing
+        ? await supabase
+            .from('chat_messages')
+            .update({ content: body, edited: true })
+            .eq('id', editing.id)
+        : await supabase.from('chat_messages').insert({
+            channel,
+            profile_id: profile.id,
+            content: body,
+            reply_to: replyTo?.id || null,
+          })
+      if (error) throw error
       setText('')
       setEditing(null)
       setReplyTo(null)
+      await load()
+    } catch (e) {
+      alert(e.message || 'שגיאה בשליחת ההודעה')
     } finally {
       setBusy(false)
     }
@@ -125,21 +127,32 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
     const mine = (reactions[messageId] || []).find(
       (r) => r.profile_id === profile.id && r.emoji === emoji,
     )
-    if (mine) {
-      await supabase
-        .from('chat_reactions')
-        .delete()
-        .match({ message_id: messageId, profile_id: profile.id, emoji })
-    } else {
-      await supabase
-        .from('chat_reactions')
-        .insert({ message_id: messageId, profile_id: profile.id, emoji })
+    const { error } = mine
+      ? await supabase
+          .from('chat_reactions')
+          .delete()
+          .match({ message_id: messageId, profile_id: profile.id, emoji })
+      : await supabase
+          .from('chat_reactions')
+          .insert({ message_id: messageId, profile_id: profile.id, emoji })
+    if (error) {
+      alert(error.message || 'שגיאה')
+      return
     }
+    await load()
   }
 
   const del = async (m) => {
     if (!window.confirm('למחוק את ההודעה?')) return
-    await supabase.from('chat_messages').delete().eq('id', m.id)
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('id', m.id)
+    if (error) {
+      alert(error.message || 'שגיאה במחיקה')
+      return
+    }
+    await load()
   }
 
   let lastDay = null
