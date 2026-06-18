@@ -55,7 +55,11 @@ function needsRoleSetup(profile) {
 function AppShell() {
   const [tab, setTab] = useState('dashboard')
   const { profile } = useAuth()
-  const { total: chatUnread } = useChatUnread()
+  const {
+    counts: chatCounts,
+    total: chatUnread,
+    refresh: refreshChat,
+  } = useChatUnread()
   const badges = { chat: chatUnread }
 
   const visibleTabs = useMemo(() => {
@@ -93,7 +97,9 @@ function AppShell() {
           {tab === 'families' && <FamiliesPage />}
           {tab === 'activities' && <ActivitiesPage />}
           {tab === 'distribution' && <DistributionPage />}
-          {tab === 'chat' && <ChatPage />}
+          {tab === 'chat' && (
+            <ChatPage chatCounts={chatCounts} onRead={refreshChat} />
+          )}
           {tab === 'team' && <TeamPage />}
           {tab === 'reports' && <ReportsPage />}
           {tab === 'docs' && <DocsPage />}

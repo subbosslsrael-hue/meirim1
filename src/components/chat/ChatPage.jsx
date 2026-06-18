@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { useChatUnread } from '../../hooks/useChatUnread'
 
 const PRESET_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏']
 
@@ -29,7 +28,7 @@ const timeLabel = (iso) =>
     minute: '2-digit',
   })
 
-function ChatRoom({ channel, canPost, profile, isAdmin }) {
+function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
   const [loading, setLoading] = useState(true)
@@ -71,8 +70,9 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
       setReactions({})
     }
     setLoading(false)
-    supabase.rpc('mark_chat_read', { p_channel: channel })
-  }, [channel])
+    await supabase.rpc('mark_chat_read', { p_channel: channel })
+    onRead?.()
+  }, [channel, onRead])
 
   useEffect(() => {
     load()
@@ -395,13 +395,13 @@ function ChatRoom({ channel, canPost, profile, isAdmin }) {
   )
 }
 
-export default function ChatPage() {
+export default function ChatPage({ chatCounts = {}, onRead }) {
   const { profile } = useAuth()
   const [channel, setChannel] = useState('general')
   const isAdmin = profile?.role === 'admin'
   const isAdminOrService = isAdmin || profile?.role === 'service'
   const canPost = channel === 'general' || isAdminOrService
-  const { counts } = useChatUnread()
+  const counts = chatCounts
 
   const TABS = [
     { id: 'general', label: 'כללי', icon: MessagesSquare },
@@ -443,6 +443,7 @@ export default function ChatPage() {
         canPost={canPost}
         profile={profile}
         isAdmin={isAdmin}
+        onRead={onRead}
       />
     </div>
   )
