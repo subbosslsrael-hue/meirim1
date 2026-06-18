@@ -10,6 +10,17 @@ export default function ActivityChat({ activity, currentProfile, onClose }) {
   const [error, setError] = useState(null)
   const bottomRef = useRef(null)
 
+  const markRead = () => {
+    supabase.from('activity_chat_reads').upsert(
+      {
+        activity_id: activity.id,
+        profile_id: currentProfile.id,
+        last_read_at: new Date().toISOString(),
+      },
+      { onConflict: 'activity_id,profile_id' },
+    )
+  }
+
   const load = async () => {
     const { data, error: err } = await supabase
       .from('activity_messages')
@@ -17,7 +28,10 @@ export default function ActivityChat({ activity, currentProfile, onClose }) {
       .eq('activity_id', activity.id)
       .order('created_at', { ascending: true })
     if (err) setError(err.message)
-    else setMessages(data || [])
+    else {
+      setMessages(data || [])
+      markRead()
+    }
     setLoading(false)
   }
 

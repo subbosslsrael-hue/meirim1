@@ -35,6 +35,7 @@ export default function ActivityCard({
   onEdit,
   onChat,
   onParticipants,
+  hasUnread,
 }) {
   const instructorNames = (activity.instructors || [])
     .map((row) => row.profile?.name)
@@ -161,9 +162,15 @@ export default function ActivityCard({
               {canChat && onChat && (
                 <button
                   onClick={() => onChat(activity)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 flex items-center gap-1"
+                  className="relative text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 flex items-center gap-1"
                 >
                   <MessageCircle size={14} /> צ׳אט
+                  {hasUnread && (
+                    <span className="absolute -top-1 -left-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white" />
+                    </span>
+                  )}
                 </button>
               )}
             </div>

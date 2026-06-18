@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Search } from 'lucide-react'
 import ActivityCard from './ActivityCard'
 import ActivityForm from './ActivityForm'
@@ -33,6 +33,27 @@ export default function ActivitiesPage() {
   const [chatting, setChatting] = useState(null)
   const [viewingParticipants, setViewingParticipants] = useState(null)
   const [debriefing, setDebriefing] = useState(null)
+  const [unread, setUnread] = useState(new Set())
+
+  const loadUnread = useCallback(async () => {
+    const { data } = await supabase.rpc('activities_with_unread')
+    setUnread(new Set((data || []).map((r) => r.activity_id)))
+  }, [])
+
+  useEffect(() => {
+    loadUnread()
+    const channel = supabase
+      .channel('activity_messages:unread')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activity_messages' },
+        () => loadUnread(),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadUnread])
 
   if (activities.loading) return <LoadingScreen message="טוען פעילויות…" />
 
@@ -159,6 +180,7 @@ export default function ActivitiesPage() {
             onEdit={setEditing}
             onChat={setChatting}
             onParticipants={setViewingParticipants}
+            hasUnread={unread.has(a.id)}
           />
         ))}
         {list.length === 0 && (
@@ -198,7 +220,10 @@ export default function ActivitiesPage() {
         <ActivityChat
           activity={chatting}
           currentProfile={profile}
-          onClose={() => setChatting(null)}
+          onClose={() => {
+            setChatting(null)
+            loadUnread()
+          }}
         />
       )}
 
