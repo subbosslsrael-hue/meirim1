@@ -73,6 +73,11 @@ function AppShell() {
     }
   }, [visibleTabs, tab])
 
+  // רענון ספירת ההודעות בכל מעבר טאב (כדי שהפתיחה/יציאה תאפס מיד)
+  useEffect(() => {
+    refreshChat()
+  }, [tab, refreshChat])
+
   const activeTabLabel =
     visibleTabs.find((t) => t.id === tab)?.label || 'מאירים'
 
