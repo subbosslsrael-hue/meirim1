@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [recovery, setRecovery] = useState(false)
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
@@ -77,7 +78,8 @@ export function AuthProvider({ children }) {
     })
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(newSession)
       if (newSession?.user) {
         fetchProfile(newSession.user.id)
@@ -128,6 +130,19 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }, [])
 
+  const resetPassword = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
+    if (error) throw error
+  }, [])
+
+  const updatePassword = useCallback(async (password) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) throw error
+    setRecovery(false)
+  }, [])
+
   const updateProfile = useCallback(
     async (updates) => {
       if (!session?.user?.id) throw new Error('אין משתמש מחובר')
@@ -150,10 +165,13 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     profileLoading,
+    recovery,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
+    resetPassword,
+    updatePassword,
     updateProfile,
     refreshProfile: () => fetchProfile(session?.user?.id),
   }

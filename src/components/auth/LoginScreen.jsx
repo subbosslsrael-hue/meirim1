@@ -1,16 +1,43 @@
 import React, { useState } from 'react'
-import { Sun, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Sun, AlertTriangle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 import Card from '../shared/Card'
 import Field, { inputCls } from '../shared/Field'
 import { useAuth } from '../../contexts/AuthContext'
+import { passwordValid } from '../../lib/password'
+import PasswordStrength from './PasswordStrength'
 
 export default function LoginScreen() {
-  const { signIn, signUp, signInWithGoogle } = useAuth()
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth()
   const [mode, setMode] = useState('signin')
-  const [form, setForm] = useState({ email: '', password: '', name: '', phone: '' })
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    confirm: '',
+    name: '',
+    phone: '',
+  })
+  const [show, setShow] = useState(false)
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  const forgot = async () => {
+    setError(null)
+    setInfo(null)
+    if (!form.email.trim()) {
+      setError('יש להזין דוא״ל לשחזור הסיסמה')
+      return
+    }
+    setBusy(true)
+    try {
+      await resetPassword(form.email.trim())
+      setInfo(`שלחנו קישור לאיפוס סיסמה אל ${form.email}. בדוק/י את הדוא״ל.`)
+    } catch (err) {
+      setError(err.message || 'שגיאה בשליחת קישור איפוס')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const handleGoogle = async () => {
     setError(null)
@@ -33,8 +60,12 @@ export default function LoginScreen() {
         await signIn({ email: form.email, password: form.password })
       } else {
         if (!form.name.trim()) throw new Error('יש להזין שם מלא')
-        if (form.password.length < 6)
-          throw new Error('סיסמה חייבת להכיל לפחות 6 תווים')
+        if (!passwordValid(form.password))
+          throw new Error(
+            'הסיסמה חייבת להכיל לפחות 8 תווים, אות גדולה, אות קטנה וספרה',
+          )
+        if (form.password !== form.confirm)
+          throw new Error('הסיסמאות אינן תואמות')
         const result = await signUp({
           email: form.email,
           password: form.password,
@@ -46,7 +77,7 @@ export default function LoginScreen() {
             `שלחנו אימייל אימות אל ${form.email}. יש ללחוץ על הקישור באימייל ואז לחזור ולהתחבר.`,
           )
           setMode('signin')
-          setForm({ ...form, password: '', name: '', phone: '' })
+          setForm({ ...form, password: '', confirm: '', name: '', phone: '' })
         }
       }
     } catch (err) {
@@ -138,16 +169,54 @@ export default function LoginScreen() {
             />
           </Field>
           <Field label="סיסמה">
-            <input
-              className={inputCls}
-              type="password"
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-              minLength={6}
-            />
+            <div className="relative">
+              <input
+                className={inputCls}
+                type={show ? 'text' : 'password'}
+                autoComplete={
+                  mode === 'signin' ? 'current-password' : 'new-password'
+                }
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+              >
+                {show ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </Field>
+
+          {mode === 'signup' && <PasswordStrength password={form.password} />}
+
+          {mode === 'signup' && (
+            <Field label="אימות סיסמה">
+              <input
+                className={inputCls}
+                type={show ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={form.confirm}
+                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                required
+              />
+            </Field>
+          )}
+
+          {mode === 'signin' && (
+            <div className="text-left -mt-1 mb-3">
+              <button
+                type="button"
+                onClick={forgot}
+                disabled={busy}
+                className="text-xs text-amber-600 hover:underline font-semibold"
+              >
+                שכחתי סיסמה
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl text-sm mb-3">

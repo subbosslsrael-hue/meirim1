@@ -12,6 +12,7 @@ import {
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/auth/LoginScreen'
 import RoleSelector from './components/auth/RoleSelector'
+import ResetPasswordScreen from './components/auth/ResetPasswordScreen'
 import LoadingScreen from './components/shared/LoadingScreen'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
@@ -151,9 +152,10 @@ function ProfileError() {
 }
 
 function Router() {
-  const { loading, user, profile, profileLoading } = useAuth()
+  const { loading, user, profile, profileLoading, recovery } = useAuth()
 
   if (loading) return <LoadingScreen message="טוען מערכת…" />
+  if (recovery) return <ResetPasswordScreen />
   if (!user) return <LoginScreen />
   if (profileLoading) return <LoadingScreen message="טוען פרופיל…" />
   if (!profile) return <ProfileError />
