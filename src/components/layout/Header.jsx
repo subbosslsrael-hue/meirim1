@@ -1,5 +1,14 @@
-import React from 'react'
-import { Sun, ShieldCheck, UserCheck, HandHeart, Briefcase, LogOut } from 'lucide-react'
+import React, { useState } from 'react'
+import {
+  Sun,
+  ShieldCheck,
+  UserCheck,
+  HandHeart,
+  Briefcase,
+  LogOut,
+  Menu,
+  X,
+} from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const ROLE_ICONS = {
@@ -9,8 +18,15 @@ const ROLE_ICONS = {
   instructor: { Icon: Briefcase, short: 'מדריך/ה', color: 'sky' },
 }
 
-export default function Header({ activeTabLabel, tabs, activeTab, onTab, badges = {} }) {
+export default function Header({
+  activeTabLabel,
+  tabs,
+  activeTab,
+  onTab,
+  badges = {},
+}) {
   const { profile, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
   const roleConf = ROLE_ICONS[profile?.role] || ROLE_ICONS.volunteer
   const RoleIcon = roleConf.Icon
   const label = !profile
@@ -23,16 +39,36 @@ export default function Header({ activeTabLabel, tabs, activeTab, onTab, badges 
           ? `${profile.name} · מדריך/ה`
           : `${profile.name} · מתנדב/ת`
 
+  const pick = (id) => {
+    onTab(id)
+    setOpen(false)
+  }
+
   return (
     <>
       <header className="bg-white border-b border-stone-200 px-5 py-3 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-2 md:hidden">
-          <Sun size={20} className="text-amber-500" />
-          <span className="font-display font-black text-emerald-700">מאירים</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOpen(true)}
+            className="md:hidden text-stone-600 hover:text-amber-600"
+            title="תפריט"
+          >
+            <Menu size={22} />
+          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <Sun size={20} className="text-amber-500" />
+            <span className="font-display font-black text-emerald-700">
+              מאירים
+            </span>
+          </div>
+          <h1 className="font-bold text-stone-800 hidden md:block">
+            {activeTabLabel}
+          </h1>
         </div>
-        <h1 className="font-bold text-stone-800 hidden md:block">{activeTabLabel}</h1>
         <div className="flex items-center gap-3 text-sm">
-          <span className={`flex items-center gap-1.5 text-${roleConf.color}-700 font-semibold`}>
+          <span
+            className={`flex items-center gap-1.5 text-${roleConf.color}-700 font-semibold`}
+          >
             <RoleIcon size={16} />
             <span className="hidden sm:inline">{label}</span>
             <span className="sm:hidden">{roleConf.short}</span>
@@ -47,30 +83,63 @@ export default function Header({ activeTabLabel, tabs, activeTab, onTab, badges 
         </div>
       </header>
 
-      <nav className="md:hidden flex overflow-x-auto gap-1 px-3 py-2 bg-white border-b border-stone-100">
-        {tabs.map((t) => {
-          const Icon = t.icon
-          return (
+      {/* תפריט נשלף למובייל */}
+      <div
+        className={`md:hidden fixed inset-0 z-50 ${
+          open ? '' : 'pointer-events-none'
+        }`}
+      >
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity ${
+            open ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={() => setOpen(false)}
+        />
+        <aside
+          className={`absolute top-0 right-0 h-full w-64 max-w-[80%] bg-white shadow-xl flex flex-col transition-transform ${
+            open ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sun size={22} className="text-amber-500" />
+              <span className="font-display text-lg font-black text-emerald-700">
+                מאירים
+              </span>
+            </div>
             <button
-              key={t.id}
-              onClick={() => onTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-                activeTab === t.id
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-stone-100 text-stone-600'
-              }`}
+              onClick={() => setOpen(false)}
+              className="text-stone-400 hover:text-stone-700"
             >
-              <Icon size={14} />
-              {t.label}
-              {badges[t.id] > 0 && (
-                <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                  {badges[t.id]}
-                </span>
-              )}
+              <X size={20} />
             </button>
-          )
-        })}
-      </nav>
+          </div>
+          <nav className="p-3 flex-1 overflow-y-auto">
+            {tabs.map((t) => {
+              const Icon = t.icon
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => pick(t.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-semibold transition ${
+                    activeTab === t.id
+                      ? 'bg-amber-500 text-white shadow'
+                      : 'text-stone-600 hover:bg-amber-50'
+                  }`}
+                >
+                  <Icon size={18} />
+                  {t.label}
+                  {badges[t.id] > 0 && (
+                    <span className="mr-auto min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {badges[t.id]}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
+      </div>
     </>
   )
 }
