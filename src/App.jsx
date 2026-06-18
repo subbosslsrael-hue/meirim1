@@ -22,6 +22,7 @@ import ReportsPage from './components/reports/ReportsPage'
 import DocsPage from './components/docs/DocsPage'
 import TeamPage from './components/team/TeamPage'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
+import WeeklyReportGate from './components/reports/WeeklyReportGate'
 
 const ALL_TABS = [
   { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
@@ -87,6 +88,7 @@ function AppShell() {
       {['admin', 'service', 'instructor'].includes(profile?.role) && (
         <PendingDebriefGate />
       )}
+      {profile?.role === 'service' && <WeeklyReportGate />}
     </div>
   )
 }

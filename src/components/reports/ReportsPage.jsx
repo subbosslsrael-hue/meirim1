@@ -35,6 +35,7 @@ import { useDistributionArchives } from '../../hooks/useDistributionArchives'
 import { useActivityArchives } from '../../hooks/useActivityArchives'
 import { getDoorPhotoUrl, getActivityFileUrl } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
+import { currentReportWeek } from '../../lib/week'
 
 function currentWeek() {
   const d = new Date()
@@ -61,7 +62,7 @@ export default function ReportsPage() {
   const [expandedArchive, setExpandedArchive] = useState(null)
   const [expandedAct, setExpandedAct] = useState(null)
   const [form, setForm] = useState({
-    week: currentWeek(),
+    week: currentReportWeek(),
     items: [{ activity_id: '', hours: '' }],
     note: '',
   })
@@ -127,7 +128,7 @@ export default function ReportsPage() {
       if (err) throw err
       await reports.mutate()
       setForm({
-        week: currentWeek(),
+        week: currentReportWeek(),
         items: [{ activity_id: '', hours: '' }],
         note: '',
       })
