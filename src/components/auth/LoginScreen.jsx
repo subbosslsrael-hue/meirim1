@@ -73,11 +73,25 @@ export default function LoginScreen() {
           phone: form.phone.trim(),
         })
         if (!result?.session) {
-          setInfo(
-            `שלחנו אימייל אימות אל ${form.email}. יש ללחוץ על הקישור באימייל ואז לחזור ולהתחבר.`,
-          )
-          setMode('signin')
-          setForm({ ...form, password: '', confirm: '', name: '', phone: '' })
+          // Supabase מחזיר "הצלחה" גם לאימייל שכבר רשום (identities ריק),
+          // אך לא שולח מייל. נזהה זאת ונציג הודעה ברורה.
+          const alreadyRegistered =
+            result?.user &&
+            Array.isArray(result.user.identities) &&
+            result.user.identities.length === 0
+          if (alreadyRegistered) {
+            setError(
+              'כתובת הדוא״ל כבר רשומה במערכת. נסו להתחבר, או "שכחתי סיסמה" לאיפוס.',
+            )
+            setMode('signin')
+            setForm({ ...form, password: '', confirm: '' })
+          } else {
+            setInfo(
+              `שלחנו אימייל אימות אל ${form.email}. יש ללחוץ על הקישור באימייל ואז לחזור ולהתחבר.`,
+            )
+            setMode('signin')
+            setForm({ ...form, password: '', confirm: '', name: '', phone: '' })
+          }
         }
       }
     } catch (err) {
