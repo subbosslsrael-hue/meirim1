@@ -1,0 +1,67 @@
+# ============================================================
+#  מאירים – שמירה על הפרויקט "ער"
+#  רץ אוטומטית כל 5 ימים ומבצע שתי פעולות:
+#   1. פינג למסד ה-Supabase  → מונע השהיה אחרי 7 ימי חוסר פעילות.
+#   2. commit קטן מדי פעם     → מונע מ-GitHub להשבית את התזמון אחרי 60 יום.
+#  אפשר גם להריץ ידנית מהלשונית Actions (כפתור "Run workflow").
+# ============================================================
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # רץ בימים 1,6,11,16,21,26,31 בכל חודש בשעה 05:00 UTC (~07:00-08:00 בישראל)
+    # מרווח מקסימלי בין ריצות: 5 ימים.
+    - cron: '0 5 */5 * *'
+  workflow_dispatch: {} # מאפשר הרצה ידנית בלחיצת כפתור
+
+# הרשאת כתיבה נחוצה כדי שה-commit האוטומטי יוכל להידחף לריפו
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://myeoflygenssgpmhofqz.supabase.co
+      # מפתח ציבורי (publishable) – מוגן ע"י RLS, בטוח שיהיה גלוי
+      SUPABASE_KEY: sb_publishable_48T6QjPoA3p8ORMJgg8oQA_9Q3KxpWE
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ping Supabase (keep the database awake)
+        run: |
+          echo "שולח פינג ל-Supabase..."
+          HTTP_CODE=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/branches?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY")
+          echo "קוד תשובה מהשרת: $HTTP_CODE"
+          echo "תוכן התשובה:"
+          cat /tmp/resp.txt || true
+          echo ""
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "❌ הפינג נכשל (קוד $HTTP_CODE)."
+            exit 1
+          fi
+          echo "✅ הפינג הצליח – מסד הנתונים נשאר ער."
+
+      - name: Keep GitHub Actions itself alive (commit only when repo goes stale)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          LAST_COMMIT_EPOCH=$(git log -1 --format=%ct)
+          NOW_EPOCH=$(date +%s)
+          DAYS_SINCE=$(( (NOW_EPOCH - LAST_COMMIT_EPOCH) / 86400 ))
+          echo "ימים מאז ה-commit האחרון: $DAYS_SINCE"
+          if [ "$DAYS_SINCE" -ge 40 ]; then
+            echo "הריפו מתקרב לגבול 60 הימים – מבצע commit לשמירה."
+            mkdir -p .github
+            date -u '+%Y-%m-%d %H:%M:%S UTC' > .github/last-keepalive.txt
+            git add .github/last-keepalive.txt
+            git commit -m "chore: keepalive – שמירה על תזמון GitHub פעיל"
+            git push
+            echo "✅ בוצע commit לשמירה על התזמון."
+          else
+            echo "✅ הריפו פעיל מספיק ($DAYS_SINCE ימים) – אין צורך ב-commit."
+          fi
