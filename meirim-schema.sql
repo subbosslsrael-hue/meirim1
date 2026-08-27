@@ -24,6 +24,7 @@ CREATE TABLE profiles (
   role user_role NOT NULL DEFAULT 'volunteer',
   phone TEXT,
   age INT,
+  approved BOOLEAN NOT NULL DEFAULT FALSE, -- אישור כניסה ע"י מנכ"ל; משתמש חדש ממתין לאישור
   branch_id UUID REFERENCES branches(id),
   skills TEXT,
   active_from DATE DEFAULT CURRENT_DATE,

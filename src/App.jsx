@@ -8,11 +8,13 @@ import {
   BookOpen,
   Contact,
   MessagesSquare,
+  UserPlus,
 } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/auth/LoginScreen'
 import RoleSelector from './components/auth/RoleSelector'
 import ResetPasswordScreen from './components/auth/ResetPasswordScreen'
+import PendingApprovalScreen from './components/auth/PendingApprovalScreen'
 import LoadingScreen from './components/shared/LoadingScreen'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
@@ -24,9 +26,12 @@ import ReportsPage from './components/reports/ReportsPage'
 import DocsPage from './components/docs/DocsPage'
 import TeamPage from './components/team/TeamPage'
 import ChatPage from './components/chat/ChatPage'
+import RequestsPage from './components/requests/RequestsPage'
+import AccessRequestsGate from './components/requests/AccessRequestsGate'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
 import WeeklyReportGate from './components/reports/WeeklyReportGate'
 import { useChatUnread } from './hooks/useChatUnread'
+import { useAccessRequests, pendingRequests } from './hooks/useAccessRequests'
 
 const ALL_TABS = [
   { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
@@ -35,14 +40,17 @@ const ALL_TABS = [
   { id: 'distribution', label: 'חלוקת מוצרים', icon: Truck },
   { id: 'chat', label: 'צ׳אט', icon: MessagesSquare },
   { id: 'team', label: 'צוות', icon: Contact },
+  { id: 'requests', label: 'בקשות כניסה', icon: UserPlus },
   { id: 'reports', label: 'דיווחים ומעקב', icon: ClipboardList },
   { id: 'docs', label: 'אפיון ותיעוד', icon: BookOpen },
 ]
 
 const TABS_BY_ROLE = {
   admin: ALL_TABS.map((t) => t.id),
-  // בת שירות רואה הכל מלבד "אפיון ותיעוד" (למנכ"ל בלבד)
-  service: ALL_TABS.map((t) => t.id).filter((id) => id !== 'docs'),
+  // בת שירות רואה הכל מלבד "אפיון ותיעוד" ו"בקשות כניסה" (למנכ"ל בלבד)
+  service: ALL_TABS.map((t) => t.id).filter(
+    (id) => id !== 'docs' && id !== 'requests',
+  ),
   instructor: ['dashboard', 'activities', 'distribution', 'chat', 'reports'],
   volunteer: ['dashboard', 'activities', 'distribution', 'chat'],
 }
@@ -56,12 +64,15 @@ function needsRoleSetup(profile) {
 function AppShell() {
   const [tab, setTab] = useState('dashboard')
   const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
   const {
     counts: chatCounts,
     total: chatUnread,
     refresh: refreshChat,
   } = useChatUnread()
-  const badges = { chat: chatUnread }
+  const accessRequests = useAccessRequests({ enabled: isAdmin })
+  const pendingCount = pendingRequests(accessRequests.data).length
+  const badges = { chat: chatUnread, requests: pendingCount }
 
   const visibleTabs = useMemo(() => {
     const allowed = TABS_BY_ROLE[profile?.role] || []
@@ -107,6 +118,9 @@ function AppShell() {
             <ChatPage chatCounts={chatCounts} onRead={refreshChat} />
           )}
           {tab === 'team' && <TeamPage />}
+          {tab === 'requests' && isAdmin && (
+            <RequestsPage requests={accessRequests} />
+          )}
           {tab === 'reports' && <ReportsPage />}
           {tab === 'docs' && <DocsPage />}
         </div>
@@ -115,6 +129,7 @@ function AppShell() {
         <PendingDebriefGate />
       )}
       {['service', 'instructor'].includes(profile?.role) && <WeeklyReportGate />}
+      {isAdmin && <AccessRequestsGate requests={accessRequests} />}
     </div>
   )
 }
@@ -160,6 +175,11 @@ function Router() {
   if (profileLoading) return <LoadingScreen message="טוען פרופיל…" />
   if (!profile) return <ProfileError />
   if (needsRoleSetup(profile)) return <RoleSelector />
+  // מי שאינו מנכ"ל וטרם אושר — מסך המתנה לאישור.
+  // === false בכוונה: אם העמודה approved עוד לא קיימת ב-DB (undefined),
+  // לא נועלים אף אחד. מנכ"ל תמיד עובר.
+  if (profile.role !== 'admin' && profile.approved === false)
+    return <PendingApprovalScreen />
   return <AppShell />
 }
 
