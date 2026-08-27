@@ -45,6 +45,12 @@ export default function Sidebar({ tabs, activeTab, onTab, badges = {} }) {
         עמותת מאירים · ע״ר 580644342
         <br />
         מערכת ניהול · גרסה 1.0
+        <br />
+        נבנתה ע״י יעקב ישראל יורב
+        <br />
+        <a href="mailto:yorav1146@gmail.com" className="hover:text-amber-600">
+          yorav1146@gmail.com
+        </a>
       </div>
     </aside>
   )
