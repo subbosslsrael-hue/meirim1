@@ -167,6 +167,7 @@ export default function ReportsPage() {
             families={families}
             activities={activities}
             reports={reports.data}
+            profiles={profiles}
           />
           <button
             onClick={() => setOpen(true)}
