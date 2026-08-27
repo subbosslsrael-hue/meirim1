@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Star,
   Paperclip,
+  Pencil,
   X,
 } from 'lucide-react'
 import {
@@ -25,6 +26,7 @@ import Field, { inputCls } from '../shared/Field'
 import LoadingScreen from '../shared/LoadingScreen'
 import ExportButton from './ExportButton'
 import ComplianceTracker from './ComplianceTracker'
+import EditDebriefModal from './EditDebriefModal'
 import { GENERAL_PROJECT } from '../../lib/constants'
 import { useAuth } from '../../contexts/AuthContext'
 import { useReports } from '../../hooks/useReports'
@@ -56,11 +58,14 @@ export default function ReportsPage() {
   const canViewArchives =
     profile?.role === 'admin' || profile?.role === 'service'
   const { data: archives } = useDistributionArchives({ enabled: canViewArchives })
-  const { data: actArchives } = useActivityArchives({ enabled: canViewArchives })
+  const { data: actArchives, update: updateActArchive } = useActivityArchives({
+    enabled: canViewArchives,
+  })
 
   const [open, setOpen] = useState(false)
   const [expandedArchive, setExpandedArchive] = useState(null)
   const [expandedAct, setExpandedAct] = useState(null)
+  const [editingDebrief, setEditingDebrief] = useState(null)
   const [form, setForm] = useState({
     week: '',
     items: [{ activity_id: '', hours: '' }],
@@ -369,6 +374,15 @@ export default function ReportsPage() {
                           </div>
                         </div>
                       )}
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingDebrief(a)}
+                          className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-semibold"
+                        >
+                          <Pencil size={13} /> עריכת תחקור
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -469,6 +483,14 @@ export default function ReportsPage() {
           </tbody>
         </table>
       </Card>
+
+      {editingDebrief && (
+        <EditDebriefModal
+          archive={editingDebrief}
+          onClose={() => setEditingDebrief(null)}
+          onSave={(updates) => updateActArchive(editingDebrief.id, updates)}
+        />
+      )}
 
       {open && (
         <Modal title="דיווח שעות שבועי" onClose={() => setOpen(false)}>

@@ -771,6 +771,17 @@ CREATE POLICY "activity archives service read" ON activity_archives
     current_user_role() = 'service'
     AND (branch_id IS NULL OR branch_id = current_user_branch())
   );
+-- בת שירות יכולה גם לערוך תחקור פעילות בסניף שלה.
+CREATE POLICY "activity archives service update" ON activity_archives
+  FOR UPDATE TO authenticated
+  USING (
+    current_user_role() = 'service'
+    AND (branch_id IS NULL OR branch_id = current_user_branch())
+  )
+  WITH CHECK (
+    current_user_role() = 'service'
+    AND (branch_id IS NULL OR branch_id = current_user_branch())
+  );
 
 -- ------------------------------------------------------------
 -- Storage: באקטים פרטיים לתמונות דלת ולקבצי תחקור.
