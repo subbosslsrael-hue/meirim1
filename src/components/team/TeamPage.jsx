@@ -15,6 +15,7 @@ import EditProfileModal from './EditProfileModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfiles } from '../../hooks/useProfiles'
 import { useBranches } from '../../hooks/useBranches'
+import { supabase } from '../../lib/supabase'
 
 const GROUPS = [
   { role: 'service', label: 'בנות שירות', icon: UserCheck, cls: 'text-amber-600' },
@@ -41,7 +42,14 @@ export default function TeamPage() {
     (isService && p.branch_id && p.branch_id === profile?.branch_id)
 
   const saveProfile = async (updates) => {
-    await profiles.update(editing.id, updates)
+    // עדכון ישיר ללא .select(): כשבת שירות מעבירה איש צוות לסניף אחר
+    // השורה כבר לא נראית לה, ו-RETURNING היה נכשל. לאחר מכן טוענים מחדש.
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', editing.id)
+    if (error) throw error
+    await profiles.mutate()
     if (editing.id === profile?.id) await refreshProfile()
   }
   const term = q.trim()
@@ -152,7 +160,7 @@ export default function TeamPage() {
           person={editing}
           isSelf={editing.id === profile?.id}
           branches={branches}
-          canEditBranch={isAdmin}
+          canEditBranch={isAdmin || isService}
           onClose={() => setEditing(null)}
           onSave={saveProfile}
         />

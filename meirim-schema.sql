@@ -287,12 +287,21 @@ CREATE POLICY "profiles read self"
   USING (id = auth.uid() OR current_user_role() = 'admin' OR
          (current_user_role() = 'service' AND branch_id = current_user_branch()));
 -- עדכון פרופיל: עצמי; admin את כולם; בת שירות את הצוות בסניף שלה.
+-- USING בודק את השורה הקיימת (על מי מותר לפעול); WITH CHECK בודק את
+-- השורה החדשה. לבת שירות ה-WITH CHECK מתירני יותר בכוונה — כדי שתוכל
+-- להעביר איש צוות מהסניף שלה לסניף אחר (היא יכולה לפעול רק על מי
+-- שכרגע בסניף שלה, אך לשייך אותו לכל סניף).
 CREATE POLICY "profiles update self"
   ON profiles FOR UPDATE TO authenticated
   USING (
     id = auth.uid()
     OR current_user_role() = 'admin'
     OR (current_user_role() = 'service' AND branch_id = current_user_branch())
+  )
+  WITH CHECK (
+    id = auth.uid()
+    OR current_user_role() = 'admin'
+    OR current_user_role() = 'service'
   );
 CREATE POLICY "profiles insert by admin or self"
   ON profiles FOR INSERT TO authenticated
