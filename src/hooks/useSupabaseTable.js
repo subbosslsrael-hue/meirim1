@@ -80,15 +80,20 @@ export function useSupabaseTable({
 
   const update = useCallback(
     async (id, updates) => {
-      const { data: updated, error: err } = await supabase
+      const { data: rows, error: err } = await supabase
         .from(table)
         .update(updates)
         .eq('id', id)
         .select()
-        .single()
       if (err) throw err
+      // 0 שורות = ה-UPDATE נחסם ע"י RLS (אין הרשאה) או שהפריט לא נמצא.
+      // מחזירים הודעה ברורה במקום שגיאת ה-JSON המעורפלת של PostgREST.
+      if (!rows || rows.length === 0) {
+        await load()
+        throw new Error('לא ניתן לשמור — ייתכן שאין לך הרשאה לערוך פריט זה.')
+      }
       await load()
-      return updated
+      return rows[0]
     },
     [table, load],
   )
