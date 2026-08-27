@@ -286,9 +286,14 @@ CREATE POLICY "profiles read self"
   ON profiles FOR SELECT TO authenticated
   USING (id = auth.uid() OR current_user_role() = 'admin' OR
          (current_user_role() = 'service' AND branch_id = current_user_branch()));
+-- עדכון פרופיל: עצמי; admin את כולם; בת שירות את הצוות בסניף שלה.
 CREATE POLICY "profiles update self"
   ON profiles FOR UPDATE TO authenticated
-  USING (id = auth.uid() OR current_user_role() = 'admin');
+  USING (
+    id = auth.uid()
+    OR current_user_role() = 'admin'
+    OR (current_user_role() = 'service' AND branch_id = current_user_branch())
+  );
 CREATE POLICY "profiles insert by admin or self"
   ON profiles FOR INSERT TO authenticated
   WITH CHECK (id = auth.uid() OR current_user_role() = 'admin');

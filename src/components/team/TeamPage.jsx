@@ -7,9 +7,11 @@ import {
   Briefcase,
   HandHeart,
   Star,
+  Pencil,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import LoadingScreen from '../shared/LoadingScreen'
+import EditProfileModal from './EditProfileModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfiles } from '../../hooks/useProfiles'
 
@@ -20,13 +22,26 @@ const GROUPS = [
 ]
 
 export default function TeamPage() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const profiles = useProfiles()
   const [q, setQ] = useState('')
+  const [editing, setEditing] = useState(null)
 
   if (profiles.loading) return <LoadingScreen message="טוען צוות…" />
 
   const isAdmin = profile?.role === 'admin'
+  const isService = profile?.role === 'service'
+
+  // הרשאת עריכה: את עצמי / admin את כולם / בת שירות את הצוות בסניף שלה.
+  const canEdit = (p) =>
+    p.id === profile?.id ||
+    isAdmin ||
+    (isService && p.branch_id && p.branch_id === profile?.branch_id)
+
+  const saveProfile = async (updates) => {
+    await profiles.update(editing.id, updates)
+    if (editing.id === profile?.id) await refreshProfile()
+  }
   const term = q.trim()
   const people = profiles.data.filter((p) =>
     [p.name, p.phone, p.branch?.name, p.skills]
@@ -76,7 +91,19 @@ export default function TeamPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
               {members.map((p) => (
                 <Card key={p.id} className="p-3.5">
-                  <div className="font-bold text-stone-800">{p.name}</div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-bold text-stone-800">{p.name}</div>
+                    {canEdit(p) && (
+                      <button
+                        onClick={() => setEditing(p)}
+                        className="flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700 shrink-0"
+                        title="עריכת פרטים"
+                      >
+                        <Pencil size={12} />
+                        {p.id === profile?.id ? 'ערוך את הפרטים שלי' : 'עריכה'}
+                      </button>
+                    )}
+                  </div>
                   <div className="mt-2 space-y-1 text-sm text-stone-600">
                     <div className="flex items-center gap-1.5">
                       <Phone size={13} className="text-stone-400" />
@@ -116,6 +143,15 @@ export default function TeamPage() {
         <p className="text-stone-400 text-sm text-center py-8">
           לא נמצאו אנשים.
         </p>
+      )}
+
+      {editing && (
+        <EditProfileModal
+          person={editing}
+          isSelf={editing.id === profile?.id}
+          onClose={() => setEditing(null)}
+          onSave={saveProfile}
+        />
       )}
     </div>
   )
