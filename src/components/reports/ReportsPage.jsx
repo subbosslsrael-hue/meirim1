@@ -9,6 +9,7 @@ import {
   Star,
   Paperclip,
   Pencil,
+  Trash2,
   X,
 } from 'lucide-react'
 import {
@@ -57,15 +58,32 @@ export default function ReportsPage() {
   const { data: activities } = useActivities()
   const canViewArchives =
     profile?.role === 'admin' || profile?.role === 'service'
-  const { data: archives } = useDistributionArchives({ enabled: canViewArchives })
+  const { data: archives, remove: removeArchive } = useDistributionArchives({
+    enabled: canViewArchives,
+  })
   const { data: actArchives, update: updateActArchive } = useActivityArchives({
     enabled: canViewArchives,
   })
+  const isAdmin = profile?.role === 'admin'
 
   const [open, setOpen] = useState(false)
   const [expandedArchive, setExpandedArchive] = useState(null)
   const [expandedAct, setExpandedAct] = useState(null)
   const [editingDebrief, setEditingDebrief] = useState(null)
+  const [confirmDelArchive, setConfirmDelArchive] = useState(null)
+  const [busyDelArchive, setBusyDelArchive] = useState(false)
+
+  const deleteArchive = async (id) => {
+    setBusyDelArchive(true)
+    try {
+      await removeArchive(id)
+      setConfirmDelArchive(null)
+    } catch (e) {
+      alert(e.message || 'שגיאה במחיקה')
+    } finally {
+      setBusyDelArchive(false)
+    }
+  }
   const [form, setForm] = useState({
     week: '',
     items: [{ activity_id: '', hours: '' }],
@@ -274,6 +292,39 @@ export default function ReportsPage() {
                           </span>
                         </div>
                       ))}
+
+                      {isAdmin && (
+                        <div className="pt-2 mt-1 border-t border-stone-100">
+                          {confirmDelArchive === a.id ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-rose-700 flex-1">
+                                למחוק את הסיכום לצמיתות?
+                              </span>
+                              <button
+                                onClick={() => deleteArchive(a.id)}
+                                disabled={busyDelArchive}
+                                className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3 py-1 rounded-lg font-semibold text-xs"
+                              >
+                                {busyDelArchive ? '…' : 'כן, מחק'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDelArchive(null)}
+                                disabled={busyDelArchive}
+                                className="text-xs text-stone-500 hover:text-stone-700 px-1"
+                              >
+                                ביטול
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDelArchive(a.id)}
+                              className="flex items-center gap-1.5 text-rose-600 hover:text-rose-700 font-semibold text-xs"
+                            >
+                              <Trash2 size={13} /> מחיקת סיכום חלוקה
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

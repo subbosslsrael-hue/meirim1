@@ -100,8 +100,17 @@ export function useSupabaseTable({
 
   const remove = useCallback(
     async (id) => {
-      const { error: err } = await supabase.from(table).delete().eq('id', id)
+      const { data: deleted, error: err } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id)
+        .select()
       if (err) throw err
+      // 0 שורות = המחיקה נחסמה ע"י RLS (אין הרשאה) או שהפריט לא נמצא.
+      if (!deleted || deleted.length === 0) {
+        await load()
+        throw new Error('לא ניתן למחוק — ייתכן שאין לך הרשאה למחוק פריט זה.')
+      }
       await load()
     },
     [table, load],
