@@ -1,11 +1,12 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X, CalendarClock } from 'lucide-react'
 import Field, { inputCls } from '../shared/Field'
+import WeekPicker from './WeekPicker'
 import { supabase } from '../../lib/supabase'
-import { currentReportWeek } from '../../lib/week'
 import { PROJECTS } from '../../lib/constants'
 
 // טופס דיווח שעות שבועי. blocking=true → חלון חוסם (בלי סגירה) לבת שירות.
+// השבוע נבחר ידנית ע"י המשתמש (בורר WeekPicker), לא אוטומטית.
 export default function WeeklyReportModal({
   profile,
   activities = [],
@@ -13,17 +14,42 @@ export default function WeeklyReportModal({
   onClose,
   onSaved,
 }) {
-  const week = currentReportWeek()
+  const [week, setWeek] = useState('') // ללא אוטומטי — המשתמש בוחר
+  const [reportedWeeks, setReportedWeeks] = useState([])
   const [items, setItems] = useState([{ activity_id: '', hours: '' }])
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  // טעינת השבועות שהמשתמש כבר דיווח עליהם (לסימון בבורר ולמניעת כפילות).
+  useEffect(() => {
+    if (!profile?.id) return
+    let active = true
+    supabase
+      .from('activity_reports')
+      .select('week')
+      .eq('profile_id', profile.id)
+      .then(({ data }) => {
+        if (!active) return
+        setReportedWeeks([...new Set((data || []).map((r) => r.week))])
+      })
+    return () => {
+      active = false
+    }
+  }, [profile?.id])
 
   const setItem = (idx, key, val) =>
     setItems((arr) => arr.map((it, i) => (i === idx ? { ...it, [key]: val } : it)))
   const addItem = () => setItems((arr) => [...arr, { activity_id: '', hours: '' }])
   const removeItem = (idx) => setItems((arr) => arr.filter((_, i) => i !== idx))
   const total = items.reduce((s, it) => s + (Number(it.hours) || 0), 0)
+
+  // ולידציה משותפת לבחירת השבוע.
+  const weekError = () => {
+    if (!week) return 'יש לבחור שבוע לדיווח'
+    if (reportedWeeks.includes(week)) return 'כבר קיים דיווח לשבוע זה'
+    return null
+  }
 
   const insertRows = async (rows) => {
     const { error: err } = await supabase.from('activity_reports').insert(rows)
@@ -33,6 +59,11 @@ export default function WeeklyReportModal({
   }
 
   const submit = async () => {
+    const we = weekError()
+    if (we) {
+      setError(we)
+      return
+    }
     const valid = items.filter((it) => it.activity_id && Number(it.hours) > 0)
     if (!valid.length) {
       setError('יש לבחור לפחות פעילות אחת עם מספר שעות גדול מ-0')
@@ -62,6 +93,11 @@ export default function WeeklyReportModal({
   }
 
   const submitEmpty = async () => {
+    const we = weekError()
+    if (we) {
+      setError(we)
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -91,7 +127,7 @@ export default function WeeklyReportModal({
         className="bg-white rounded-2xl w-full max-w-md p-5 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <CalendarClock size={18} className="text-amber-500" />
             <h2 className="font-black text-stone-800">דיווח שעות שבועי</h2>
@@ -105,13 +141,18 @@ export default function WeeklyReportModal({
             </button>
           )}
         </div>
-        <p className="text-xs text-stone-400 mb-3">שבוע {week}</p>
 
         {blocking && (
           <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
             יש למלא את הדיווח השבועי כדי להמשיך. החלון ייסגר רק לאחר השמירה.
           </div>
         )}
+
+        <WeekPicker
+          value={week}
+          onChange={setWeek}
+          reportedWeeks={reportedWeeks}
+        />
 
         <div className="text-sm font-semibold text-stone-600 mb-1.5">
           שעות לפי פעילות

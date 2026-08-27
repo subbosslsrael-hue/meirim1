@@ -35,7 +35,7 @@ import { useDistributionArchives } from '../../hooks/useDistributionArchives'
 import { useActivityArchives } from '../../hooks/useActivityArchives'
 import { getDoorPhotoUrl, getActivityFileUrl } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
-import { currentReportWeek } from '../../lib/week'
+import WeekPicker from './WeekPicker'
 
 function currentWeek() {
   const d = new Date()
@@ -62,7 +62,7 @@ export default function ReportsPage() {
   const [expandedArchive, setExpandedArchive] = useState(null)
   const [expandedAct, setExpandedAct] = useState(null)
   const [form, setForm] = useState({
-    week: currentReportWeek(),
+    week: '',
     items: [{ activity_id: '', hours: '' }],
     note: '',
   })
@@ -99,9 +99,29 @@ export default function ReportsPage() {
       .map((p) => ({ name: p.name, שעות: m[p.id] || 0 }))
   }, [reports.data, profiles])
 
+  // השבועות שהמשתמש הנוכחי כבר דיווח עליהם (לסימון בבורר ולמניעת כפילות).
+  const myReportedWeeks = useMemo(
+    () => [
+      ...new Set(
+        reports.data
+          .filter((r) => r.profile_id === profile?.id)
+          .map((r) => r.week),
+      ),
+    ],
+    [reports.data, profile?.id],
+  )
+
   if (reports.loading) return <LoadingScreen message="טוען דיווחים…" />
 
   const submit = async () => {
+    if (!form.week) {
+      setError('יש לבחור שבוע לדיווח')
+      return
+    }
+    if (myReportedWeeks.includes(form.week)) {
+      setError('כבר קיים דיווח לשבוע זה')
+      return
+    }
     const valid = form.items.filter(
       (it) => it.activity_id && Number(it.hours) > 0,
     )
@@ -128,7 +148,7 @@ export default function ReportsPage() {
       if (err) throw err
       await reports.mutate()
       setForm({
-        week: currentReportWeek(),
+        week: '',
         items: [{ activity_id: '', hours: '' }],
         note: '',
       })
@@ -453,14 +473,11 @@ export default function ReportsPage() {
 
       {open && (
         <Modal title="דיווח שעות שבועי" onClose={() => setOpen(false)}>
-          <Field label="שבוע">
-            <input
-              className={inputCls}
-              value={form.week}
-              onChange={(e) => setForm({ ...form, week: e.target.value })}
-              placeholder="2026-W22"
-            />
-          </Field>
+          <WeekPicker
+            value={form.week}
+            onChange={(w) => setForm({ ...form, week: w })}
+            reportedWeeks={myReportedWeeks}
+          />
 
           <div className="text-sm font-semibold text-stone-600 mb-1.5">
             שעות לפי פעילות
