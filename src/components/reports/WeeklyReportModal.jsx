@@ -3,7 +3,7 @@ import { X, CalendarClock } from 'lucide-react'
 import Field, { inputCls } from '../shared/Field'
 import WeekPicker from './WeekPicker'
 import { supabase } from '../../lib/supabase'
-import { PROJECTS } from '../../lib/constants'
+import { GENERAL_PROJECT } from '../../lib/constants'
 
 // טופס דיווח שעות שבועי. blocking=true → חלון חוסם (בלי סגירה) לבת שירות.
 // השבוע נבחר ידנית ע"י המשתמש (בורר WeekPicker), לא אוטומטית.
@@ -64,9 +64,9 @@ export default function WeeklyReportModal({
       setError(we)
       return
     }
-    const valid = items.filter((it) => it.activity_id && Number(it.hours) > 0)
+    const valid = items.filter((it) => Number(it.hours) > 0)
     if (!valid.length) {
-      setError('יש לבחור לפחות פעילות אחת עם מספר שעות גדול מ-0')
+      setError('יש להזין לפחות שורה אחת עם מספר שעות גדול מ-0')
       return
     }
     setBusy(true)
@@ -78,9 +78,9 @@ export default function WeeklyReportModal({
           return {
             profile_id: profile.id,
             week,
-            activity_id: it.activity_id,
+            activity_id: it.activity_id || null,
             activity_name: act?.name || null,
-            project: act?.project || PROJECTS[0],
+            project: act?.project || GENERAL_PROJECT,
             hours: Number(it.hours),
             note: note || null,
           }
@@ -107,7 +107,7 @@ export default function WeeklyReportModal({
           week,
           activity_id: null,
           activity_name: null,
-          project: PROJECTS[0],
+          project: GENERAL_PROJECT,
           hours: 0,
           note: note || 'אין פעילות לדווח השבוע',
         },
@@ -165,7 +165,7 @@ export default function WeeklyReportModal({
                 value={it.activity_id}
                 onChange={(e) => setItem(idx, 'activity_id', e.target.value)}
               >
-                <option value="">— בחר פעילות —</option>
+                <option value="">כללי (ללא פעילות מסוימת)</option>
                 {activities.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}

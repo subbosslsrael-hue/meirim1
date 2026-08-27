@@ -25,7 +25,7 @@ import Field, { inputCls } from '../shared/Field'
 import LoadingScreen from '../shared/LoadingScreen'
 import ExportButton from './ExportButton'
 import ComplianceTracker from './ComplianceTracker'
-import { PROJECTS } from '../../lib/constants'
+import { GENERAL_PROJECT } from '../../lib/constants'
 import { useAuth } from '../../contexts/AuthContext'
 import { useReports } from '../../hooks/useReports'
 import { useProfiles } from '../../hooks/useProfiles'
@@ -122,11 +122,9 @@ export default function ReportsPage() {
       setError('כבר קיים דיווח לשבוע זה')
       return
     }
-    const valid = form.items.filter(
-      (it) => it.activity_id && Number(it.hours) > 0,
-    )
+    const valid = form.items.filter((it) => Number(it.hours) > 0)
     if (!valid.length) {
-      setError('יש לבחור לפחות פעילות אחת עם מספר שעות גדול מ-0')
+      setError('יש להזין לפחות שורה אחת עם מספר שעות גדול מ-0')
       return
     }
     setBusy(true)
@@ -137,9 +135,9 @@ export default function ReportsPage() {
         return {
           profile_id: profile.id,
           week: form.week,
-          activity_id: it.activity_id,
+          activity_id: it.activity_id || null,
           activity_name: act?.name || null,
-          project: act?.project || PROJECTS[0],
+          project: act?.project || GENERAL_PROJECT,
           hours: Number(it.hours),
           note: form.note || null,
         }
@@ -490,7 +488,7 @@ export default function ReportsPage() {
                   value={it.activity_id}
                   onChange={(e) => setItem(idx, 'activity_id', e.target.value)}
                 >
-                  <option value="">— בחר פעילות —</option>
+                  <option value="">כללי (ללא פעילות מסוימת)</option>
                   {activities.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}

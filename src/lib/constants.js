@@ -5,6 +5,9 @@ export const PROJECTS = [
   'אור השחר',
 ]
 
+// תווית לדיווח שעות שאינו משויך לפעילות/פרויקט מסוים.
+export const GENERAL_PROJECT = 'כללי'
+
 export const CATEGORIES = [
   'משפחה במצב סוציו-אקונומי נמוך',
   'קשיש/ה בודד/ה',
