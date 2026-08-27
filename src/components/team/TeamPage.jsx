@@ -14,6 +14,7 @@ import LoadingScreen from '../shared/LoadingScreen'
 import EditProfileModal from './EditProfileModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfiles } from '../../hooks/useProfiles'
+import { useBranches } from '../../hooks/useBranches'
 
 const GROUPS = [
   { role: 'service', label: 'בנות שירות', icon: UserCheck, cls: 'text-amber-600' },
@@ -24,6 +25,7 @@ const GROUPS = [
 export default function TeamPage() {
   const { profile, refreshProfile } = useAuth()
   const profiles = useProfiles()
+  const { data: branches } = useBranches()
   const [q, setQ] = useState('')
   const [editing, setEditing] = useState(null)
 
@@ -149,6 +151,8 @@ export default function TeamPage() {
         <EditProfileModal
           person={editing}
           isSelf={editing.id === profile?.id}
+          branches={branches}
+          canEditBranch={isAdmin}
           onClose={() => setEditing(null)}
           onSave={saveProfile}
         />

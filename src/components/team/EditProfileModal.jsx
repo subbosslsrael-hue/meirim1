@@ -3,13 +3,22 @@ import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
 
-// עריכת פרטים אישיים של איש צוות (שם / טלפון / גיל / מיומנות).
-// isSelf → כותרת "הפרטים שלי". onSave מקבל את העדכונים ומחזיר Promise.
-export default function EditProfileModal({ person, isSelf, onClose, onSave }) {
+// עריכת פרטים אישיים של איש צוות (שם / טלפון / גיל / מיומנות / סניף).
+// isSelf → כותרת "הפרטים שלי". canEditBranch → הצגת בחירת סניף (מנכ"ל בלבד).
+// onSave מקבל את העדכונים ומחזיר Promise.
+export default function EditProfileModal({
+  person,
+  isSelf,
+  branches = [],
+  canEditBranch = false,
+  onClose,
+  onSave,
+}) {
   const [name, setName] = useState(person.name || '')
   const [phone, setPhone] = useState(person.phone || '')
   const [age, setAge] = useState(person.age ?? '')
   const [skills, setSkills] = useState(person.skills || '')
+  const [branchId, setBranchId] = useState(person.branch_id || '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -30,12 +39,15 @@ export default function EditProfileModal({ person, isSelf, onClose, onSave }) {
     setBusy(true)
     setError(null)
     try {
-      await onSave({
+      const updates = {
         name: name.trim(),
         phone: phone ? normalizePhone(phone) : null,
         age: ageNum,
         skills: skills.trim() || null,
-      })
+      }
+      // סניף נערך רק ע"י מי שמורשה (מנכ"ל) — אחרת לא נוגעים בשדה.
+      if (canEditBranch) updates.branch_id = branchId || null
+      await onSave(updates)
       onClose()
     } catch (e) {
       setError(e.message || 'שגיאה בשמירה')
@@ -77,6 +89,24 @@ export default function EditProfileModal({ person, isSelf, onClose, onSave }) {
           />
         </Field>
       </div>
+
+      {canEditBranch && (
+        <Field label="סניף">
+          <select
+            className={inputCls}
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+          >
+            <option value="">— ללא סניף —</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+                {b.city ? ` · ${b.city}` : ''}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       <Field label="מיומנות / כישורים (אופציונלי)">
         <input
