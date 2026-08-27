@@ -40,10 +40,14 @@ export default function WeekPicker({
         <span className="shrink-0">בחירה לפי תאריך:</span>
         <input
           type="date"
+          value={value || ''}
           onChange={onDate}
           className="flex-1 min-w-0 px-2 py-1 rounded-lg border border-stone-200 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
         />
       </div>
+      <p className="text-[11px] text-stone-400 mb-2 pr-5">
+        כל תאריך ייצמד אוטומטית לשבוע השלם (יום ראשון עד שבת).
+      </p>
 
       <div className="max-h-48 overflow-y-auto space-y-1 border border-stone-100 rounded-xl p-1.5">
         {list.map((key) => {

@@ -1,14 +1,16 @@
-// מפתח שבוע הדיווח: תאריך יום שבת שמתחיל את השבוע (YYYY-MM-DD).
-// השבוע "מתאפס" כל שבת ב-00:00 (מסונכרן ללוח השנה).
+// מפתח שבוע הדיווח: תאריך יום ראשון שמתחיל את השבוע (YYYY-MM-DD).
+// השבוע רץ מיום ראשון עד יום שבת ו"מתאפס" כל יום ראשון ב-00:00.
 
 const pad = (n) => String(n).padStart(2, '0')
 const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-// מפתח השבוע (יום השבת הפותח) עבור תאריך נתון.
+// מפתח השבוע (יום ראשון הפותח) עבור תאריך נתון.
+// כל תאריך "נצמד" ליום ראשון של אותו שבוע — כך שגם בחירת תאריך
+// באמצע השבוע מחזירה תמיד את השבוע השלם (ראשון עד שבת).
 export function weekKeyForDate(date) {
-  const diff = (date.getDay() + 1) % 7 // ימים שעברו מאז יום שבת האחרון (שבת=0)
-  const sat = new Date(date.getFullYear(), date.getMonth(), date.getDate() - diff)
-  return fmt(sat)
+  const diff = date.getDay() // ימים שעברו מאז יום ראשון האחרון (ראשון=0 … שבת=6)
+  const sun = new Date(date.getFullYear(), date.getMonth(), date.getDate() - diff)
+  return fmt(sun)
 }
 
 // מפתח השבוע הנוכחי.
@@ -22,7 +24,7 @@ function parseKey(key) {
   return new Date(y, m - 1, d)
 }
 
-// טווח התאריכים של השבוע: יום שבת (start) עד יום שישי (end).
+// טווח התאריכים של השבוע: יום ראשון (start) עד יום שבת (end).
 export function weekRange(key) {
   const start = parseKey(key)
   const end = new Date(
