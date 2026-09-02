@@ -76,15 +76,16 @@ export default function FamilyForm({
     const city = form.city || branch?.city || ''
 
     // fallback מקומי (סניף נוכחי בלבד) — עד שה-RPC יותקן ב-DB, או אם הקריאה נכשלה.
+    // כפילות = אותו שם, ובנוסף אותו טלפון או אותה עיר+כתובת. דורשים התאמת שם
+    // כדי שמשפחות שונות שחולקות טלפון (קרוב/איש קשר משותף) לא ייחסמו בטעות.
     const localDuplicate = () =>
       existingFamilies.some((f) => {
         if (isEdit && f.id === family.id) return false
+        if (norm(f.name) !== norm(form.name)) return false
         const samePhone = phoneKey && normalizePhone(f.phone) === phoneKey
-        const sameNameAddr =
-          norm(f.name) === norm(form.name) &&
-          norm(f.city) === norm(city) &&
-          norm(f.address) === norm(form.address)
-        return samePhone || sameNameAddr
+        const sameAddr =
+          norm(f.city) === norm(city) && norm(f.address) === norm(form.address)
+        return samePhone || sameAddr
       })
 
     setBusy(true)
