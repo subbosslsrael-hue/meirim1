@@ -3,9 +3,12 @@
 -- SECURITY DEFINER: checks across ALL branches but returns only true/false,
 -- so a service user never sees other branches' family data.
 --
--- A duplicate requires the SAME name, plus EITHER the same normalized phone
--- OR the same city + address. Requiring the name avoids false positives when
--- two different families share a phone (a relative / shared contact).
+-- A duplicate = the SAME name AND the SAME normalized phone. City/address are
+-- intentionally NOT compared: a common surname at the same city (or even the
+-- same building address without an apartment number) is legitimate and must
+-- not be blocked. Every family has a required phone, so name+phone is enough.
+-- (p_city / p_address are kept in the signature but unused, so the client
+--  call and the grant don't need to change.)
 CREATE OR REPLACE FUNCTION family_duplicate_exists(
   p_name    TEXT,
   p_city    TEXT,
@@ -18,14 +21,9 @@ SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1 FROM families f
     WHERE (p_exclude IS NULL OR f.id <> p_exclude)
+      AND p_phone IS NOT NULL AND p_phone <> ''
+      AND f.phone = p_phone
       AND lower(trim(coalesce(f.name, ''))) = lower(trim(coalesce(p_name, '')))
-      AND (
-        (p_phone IS NOT NULL AND p_phone <> '' AND f.phone = p_phone)
-        OR (
-          lower(trim(coalesce(f.city, '')))    = lower(trim(coalesce(p_city, '')))
-          AND lower(trim(coalesce(f.address,''))) = lower(trim(coalesce(p_address,'')))
-        )
-      )
   );
 $$;
 

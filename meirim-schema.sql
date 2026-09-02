@@ -855,14 +855,9 @@ SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1 FROM families f
     WHERE (p_exclude IS NULL OR f.id <> p_exclude)
+      AND p_phone IS NOT NULL AND p_phone <> ''
+      AND f.phone = p_phone
       AND lower(trim(coalesce(f.name, ''))) = lower(trim(coalesce(p_name, '')))
-      AND (
-        (p_phone IS NOT NULL AND p_phone <> '' AND f.phone = p_phone)
-        OR (
-          lower(trim(coalesce(f.city, '')))    = lower(trim(coalesce(p_city, '')))
-          AND lower(trim(coalesce(f.address,''))) = lower(trim(coalesce(p_address,'')))
-        )
-      )
   );
 $$;
 

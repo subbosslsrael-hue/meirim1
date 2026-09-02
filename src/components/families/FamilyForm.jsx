@@ -76,16 +76,16 @@ export default function FamilyForm({
     const city = form.city || branch?.city || ''
 
     // fallback מקומי (סניף נוכחי בלבד) — עד שה-RPC יותקן ב-DB, או אם הקריאה נכשלה.
-    // כפילות = אותו שם, ובנוסף אותו טלפון או אותה עיר+כתובת. דורשים התאמת שם
-    // כדי שמשפחות שונות שחולקות טלפון (קרוב/איש קשר משותף) לא ייחסמו בטעות.
+    // כפילות = אותו שם + אותו טלפון. לא משווים כתובת/עיר, כי שם משפחה נפוץ
+    // באותה עיר (ואף אותה כתובת בבניין דירות) הוא לגיטימי ואסור לחסום אותו.
     const localDuplicate = () =>
       existingFamilies.some((f) => {
         if (isEdit && f.id === family.id) return false
-        if (norm(f.name) !== norm(form.name)) return false
-        const samePhone = phoneKey && normalizePhone(f.phone) === phoneKey
-        const sameAddr =
-          norm(f.city) === norm(city) && norm(f.address) === norm(form.address)
-        return samePhone || sameAddr
+        if (!phoneKey) return false
+        return (
+          norm(f.name) === norm(form.name) &&
+          normalizePhone(f.phone) === phoneKey
+        )
       })
 
     setBusy(true)
@@ -104,7 +104,9 @@ export default function FamilyForm({
       // אם ה-RPC עדיין לא קיים ב-DB — נופלים לבדיקה המקומית.
       const isDup = dupErr ? localDuplicate() : dupData === true
       if (isDup) {
-        setError('כבר קיימת משפחה עם פרטים זהים במאגר. לא ניתן לשמור כפילות.')
+        setError(
+          'כבר קיימת משפחה עם אותו שם ומספר טלפון. לא ניתן לשמור כפילות.',
+        )
         return
       }
 
