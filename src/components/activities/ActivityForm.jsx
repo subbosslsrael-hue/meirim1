@@ -4,13 +4,7 @@ import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import SkillsPicker from './SkillsPicker'
 import { PROJECTS } from '../../lib/constants'
-
-// תאריך היום המקומי (YYYY-MM-DD) — בלי בעיות אזור-זמן של toISOString.
-const todayStr = () => {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+import { todayKey } from '../../lib/week'
 
 const skillTokens = (s) =>
   String(s || '')
@@ -47,7 +41,7 @@ export default function ActivityForm({
   canManageSkills = false,
 }) {
   const isEdit = !!activity
-  const today = useMemo(() => todayStr(), [])
+  const today = useMemo(() => todayKey(), [])
   const [form, setForm] = useState({
     name: activity?.name || '',
     project: activity?.project || PROJECTS[0],

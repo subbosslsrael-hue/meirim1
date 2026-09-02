@@ -18,6 +18,12 @@ export function currentReportWeek() {
   return weekKeyForDate(new Date())
 }
 
+// תאריך היום המקומי כמחרוזת 'YYYY-MM-DD' (ללא בעיות אזור-זמן של toISOString).
+// שימושי כ-min לשדות תאריך שאסור לבחור בהם עבר.
+export function todayKey() {
+  return fmt(new Date())
+}
+
 // המרת מפתח 'YYYY-MM-DD' לאובייקט Date מקומי.
 function parseKey(key) {
   const [y, m, d] = key.split('-').map(Number)

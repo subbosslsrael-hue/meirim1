@@ -18,6 +18,7 @@ import DistributionMap from './DistributionMap'
 import StopsList from './StopsList'
 import { optimizeOrder, routeLengthKm } from '../../lib/route'
 import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
+import { todayKey } from '../../lib/week'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDistributions } from '../../hooks/useDistributions'
 import { useFamilies } from '../../hooks/useFamilies'
@@ -569,10 +570,19 @@ async function createDist(payload, distributions, setSelId) {
 function NewDistributionModal({ onClose, onCreate, families, form, setForm }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const today = todayKey()
 
   const submit = async () => {
     if (!form.name.trim()) {
       setError('יש להזין שם חלוקה')
+      return
+    }
+    if (!form.dist_date) {
+      setError('יש לבחור תאריך לחלוקה')
+      return
+    }
+    if (form.dist_date < today) {
+      setError('לא ניתן לקבוע חלוקה לתאריך שעבר')
       return
     }
     setBusy(true)
@@ -603,6 +613,7 @@ function NewDistributionModal({ onClose, onCreate, families, form, setForm }) {
             type="date"
             className={inputCls}
             value={form.dist_date}
+            min={today}
             onChange={(e) => setForm({ ...form, dist_date: e.target.value })}
           />
         </Field>
