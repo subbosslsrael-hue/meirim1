@@ -890,10 +890,7 @@ CREATE POLICY "skill_options admin manage"
   USING (current_user_role() = 'admin')
   WITH CHECK (current_user_role() = 'admin');
 
-INSERT INTO skill_options (name) VALUES
-  ('עבודה עם ילדים'), ('עבודה עם קשישים'), ('מוגבלויות'), ('הדרכה'),
-  ('מוזיקה'), ('ספורט'), ('אמנות ויצירה'), ('בישול')
-ON CONFLICT (name) DO NOTHING;
+-- ללא זריעה כאן (שמות המיומנויות בעברית) — המנכ"ל מוסיף אותם מהממשק.
 
 DO $$
 BEGIN

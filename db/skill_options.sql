@@ -1,10 +1,8 @@
--- ============================================================
--- רשימת מיומנויות נדרשות לפעילויות — משותפת, בניהול מנכ"ל
--- הריצי אותי פעם אחת ב-Supabase → SQL Editor. בטוח להרצה חוזרת.
---
--- קריאה: כל משתמש מחובר (כדי לאכלס את בורר המיומנויות בטופס הפעילות).
--- כתיבה (הוספה/מחיקה): מנכ"ל בלבד — נאכף ב-RLS.
--- ============================================================
+-- Shared required-skills list for activities, managed by admin.
+-- Run once in Supabase SQL Editor. Safe to re-run.
+-- Read: any authenticated user. Write (add/delete): admin only (RLS).
+-- No seed rows here on purpose (skill names are Hebrew) - the admin adds
+-- them from the app: Activities > add/edit activity > "manage skills list".
 CREATE TABLE IF NOT EXISTS skill_options (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
@@ -24,25 +22,12 @@ CREATE POLICY "skill_options admin manage"
   USING (current_user_role() = 'admin')
   WITH CHECK (current_user_role() = 'admin');
 
--- זרעים ראשוניים (אפשר לשנות/למחוק דרך הממשק אחר כך)
-INSERT INTO skill_options (name) VALUES
-  ('עבודה עם ילדים'),
-  ('עבודה עם קשישים'),
-  ('מוגבלויות'),
-  ('הדרכה'),
-  ('מוזיקה'),
-  ('ספורט'),
-  ('אמנות ויצירה'),
-  ('בישול')
-ON CONFLICT (name) DO NOTHING;
-
--- רישום ל-Realtime כדי ששינויים של המנכ"ל ישתקפו מיד לכל המשתמשים.
 DO $$
 BEGIN
   BEGIN
     EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE skill_options';
   EXCEPTION
-    WHEN duplicate_object THEN NULL;   -- כבר רשומה
-    WHEN undefined_object THEN NULL;   -- אין publication (סביבה לא-Supabase)
+    WHEN duplicate_object THEN NULL;
+    WHEN undefined_object THEN NULL;
   END;
 END $$;
