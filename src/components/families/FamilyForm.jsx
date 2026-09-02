@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
+import { supabase } from '../../lib/supabase'
 import { CATEGORIES } from '../../lib/constants'
 import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
 import {
@@ -66,31 +67,46 @@ export default function FamilyForm({
       setError('מספר הטלפון אינו תקין (לדוגמה: 050-1234567)')
       return
     }
-    // מניעת כפילויות: אותו טלפון, או אותו שם+עיר+כתובת, של משפחה אחרת במאגר.
+    // מניעת כפילויות. חשוב: בת שירות רואה (דרך RLS) רק את סניפה, ולכן בדיקה
+    // מקומית לא תתפוס כפילות מסניף אחר. הבדיקה נעשית בשרת דרך RPC ב-SECURITY
+    // DEFINER שמחזירה true/false בלבד — מבלי לחשוף פרטי משפחות מסניפים אחרים.
     const norm = (s) => (s || '').trim().toLowerCase()
     const phoneKey = normalizePhone(form.phone)
-    const branchForCity = branches.find((b) => b.id === form.branch_id)
-    const cityKey = norm(form.city || branchForCity?.city || '')
-    const dup = existingFamilies.find((f) => {
-      if (isEdit && f.id === family.id) return false
-      const samePhone = phoneKey && normalizePhone(f.phone) === phoneKey
-      const sameNameAddr =
-        norm(f.name) === norm(form.name) &&
-        norm(f.city) === cityKey &&
-        norm(f.address) === norm(form.address)
-      return samePhone || sameNameAddr
-    })
-    if (dup) {
-      setError(
-        `כבר קיימת משפחה עם פרטים זהים במאגר ("${dup.name}"). לא ניתן לשמור כפילות.`,
-      )
-      return
-    }
+    const branch = branches.find((b) => b.id === form.branch_id)
+    const city = form.city || branch?.city || ''
+
+    // fallback מקומי (סניף נוכחי בלבד) — עד שה-RPC יותקן ב-DB, או אם הקריאה נכשלה.
+    const localDuplicate = () =>
+      existingFamilies.some((f) => {
+        if (isEdit && f.id === family.id) return false
+        const samePhone = phoneKey && normalizePhone(f.phone) === phoneKey
+        const sameNameAddr =
+          norm(f.name) === norm(form.name) &&
+          norm(f.city) === norm(city) &&
+          norm(f.address) === norm(form.address)
+        return samePhone || sameNameAddr
+      })
+
     setBusy(true)
     setError(null)
     try {
-      const branch = branches.find((b) => b.id === form.branch_id)
-      const city = form.city || branch?.city || ''
+      const { data: dupData, error: dupErr } = await supabase.rpc(
+        'family_duplicate_exists',
+        {
+          p_name: form.name,
+          p_city: city,
+          p_address: form.address,
+          p_phone: phoneKey,
+          p_exclude: isEdit ? family.id : null,
+        },
+      )
+      // אם ה-RPC עדיין לא קיים ב-DB — נופלים לבדיקה המקומית.
+      const isDup = dupErr ? localDuplicate() : dupData === true
+      if (isDup) {
+        setError('כבר קיימת משפחה עם פרטים זהים במאגר. לא ניתן לשמור כפילות.')
+        return
+      }
+
       // גאוקוד מחדש רק אם הכתובת/עיר השתנו (או במשפחה חדשה)
       let lat = family?.lat ?? null
       let lng = family?.lng ?? null

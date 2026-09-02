@@ -832,3 +832,37 @@ END $$;
 -- ============================================================
 -- סיום ההשלמות המשוחזרות.
 -- ============================================================
+
+-- ============================================================
+-- בדיקת כפילות משפחות — חוצת-סניפים (2026-09)
+-- מאפשר לחסום יצירת/עריכת משפחה עם פרטים זהים גם כשהמשפחה הכפולה
+-- נמצאת בסניף אחר שהמשתמש (בת שירות) אינו רשאי לראות.
+-- SECURITY DEFINER: הבדיקה עוקפת RLS ובודקת בכל הסניפים, אך מחזירה
+-- true/false בלבד — לכן לא נחשפים פרטי משפחות מסניפים אחרים.
+-- "כפילות" = אותו טלפון (מנורמל), או אותו שם+עיר+כתובת (ללא רישיות/רווחים).
+-- ============================================================
+CREATE OR REPLACE FUNCTION family_duplicate_exists(
+  p_name    TEXT,
+  p_city    TEXT,
+  p_address TEXT,
+  p_phone   TEXT,
+  p_exclude UUID DEFAULT NULL
+)
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM families f
+    WHERE (p_exclude IS NULL OR f.id <> p_exclude)
+      AND (
+        (p_phone IS NOT NULL AND p_phone <> '' AND f.phone = p_phone)
+        OR (
+          lower(trim(coalesce(f.name, '')))    = lower(trim(coalesce(p_name, '')))
+          AND lower(trim(coalesce(f.city, ''))) = lower(trim(coalesce(p_city, '')))
+          AND lower(trim(coalesce(f.address,''))) = lower(trim(coalesce(p_address,'')))
+        )
+      )
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION
+  family_duplicate_exists(TEXT, TEXT, TEXT, TEXT, UUID) TO authenticated;
