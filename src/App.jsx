@@ -9,6 +9,7 @@ import {
   Contact,
   MessagesSquare,
   UserPlus,
+  Star,
 } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/auth/LoginScreen'
@@ -26,6 +27,7 @@ import ReportsPage from './components/reports/ReportsPage'
 import DocsPage from './components/docs/DocsPage'
 import TeamPage from './components/team/TeamPage'
 import ChatPage from './components/chat/ChatPage'
+import MySkillsPage from './components/profile/MySkillsPage'
 import RequestsPage from './components/requests/RequestsPage'
 import AccessRequestsGate from './components/requests/AccessRequestsGate'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
@@ -42,6 +44,7 @@ const ALL_TABS = [
   { id: 'team', label: 'צוות', icon: Contact },
   { id: 'requests', label: 'בקשות כניסה', icon: UserPlus },
   { id: 'reports', label: 'דיווחים ומעקב', icon: ClipboardList },
+  { id: 'myskills', label: 'המיומנויות שלי', icon: Star },
   { id: 'docs', label: 'אפיון ותיעוד', icon: BookOpen },
 ]
 
@@ -51,7 +54,14 @@ const TABS_BY_ROLE = {
   service: ALL_TABS.map((t) => t.id).filter(
     (id) => id !== 'docs' && id !== 'requests',
   ),
-  instructor: ['dashboard', 'activities', 'distribution', 'chat', 'reports'],
+  instructor: [
+    'dashboard',
+    'activities',
+    'distribution',
+    'chat',
+    'reports',
+    'myskills',
+  ],
   volunteer: ['dashboard', 'activities', 'distribution', 'chat'],
 }
 
@@ -122,6 +132,7 @@ function AppShell() {
             <RequestsPage requests={accessRequests} />
           )}
           {tab === 'reports' && <ReportsPage />}
+          {tab === 'myskills' && <MySkillsPage />}
           {tab === 'docs' && <DocsPage />}
         </div>
       </main>

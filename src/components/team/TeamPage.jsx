@@ -15,6 +15,7 @@ import EditProfileModal from './EditProfileModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfiles } from '../../hooks/useProfiles'
 import { useBranches } from '../../hooks/useBranches'
+import { useSkillOptions } from '../../hooks/useSkillOptions'
 import { supabase } from '../../lib/supabase'
 
 const GROUPS = [
@@ -27,6 +28,7 @@ export default function TeamPage() {
   const { profile, refreshProfile } = useAuth()
   const profiles = useProfiles()
   const { data: branches } = useBranches()
+  const skillOptions = useSkillOptions()
   const [q, setQ] = useState('')
   const [editing, setEditing] = useState(null)
 
@@ -35,11 +37,13 @@ export default function TeamPage() {
   const isAdmin = profile?.role === 'admin'
   const isService = profile?.role === 'service'
 
-  // הרשאת עריכה: את עצמי / admin את כולם / בת שירות את הצוות בסניף שלה.
+  // הרשאת עריכה: את עצמי / admin את כולם / בת שירות את הצוות בסניף שלה
+  // וגם את המדריכים (שהם כלל-מערכתיים ואין להם סניף).
   const canEdit = (p) =>
     p.id === profile?.id ||
     isAdmin ||
-    (isService && p.branch_id && p.branch_id === profile?.branch_id)
+    (isService && p.branch_id && p.branch_id === profile?.branch_id) ||
+    (isService && p.role === 'instructor')
 
   const saveProfile = async (updates) => {
     // עדכון ישיר ללא .select(): כשבת שירות מעבירה איש צוות לסניף אחר
@@ -161,6 +165,7 @@ export default function TeamPage() {
           isSelf={editing.id === profile?.id}
           branches={branches}
           canEditBranch={isAdmin || isService}
+          skillOptions={skillOptions.data}
           onClose={() => setEditing(null)}
           onSave={saveProfile}
         />

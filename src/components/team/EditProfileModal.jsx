@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
+import SkillsPicker from '../activities/SkillsPicker'
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -15,6 +16,7 @@ export default function EditProfileModal({
   isSelf,
   branches = [],
   canEditBranch = false,
+  skillOptions = [],
   onClose,
   onSave,
 }) {
@@ -113,12 +115,12 @@ export default function EditProfileModal({
         </Field>
       )}
 
-      <Field label="מיומנות / כישורים (אופציונלי)">
-        <input
-          className={inputCls}
+      <Field label="מיומנויות / כישורים (בחירה מהרשימה או כתיבה חופשית ב״אחר״)">
+        <SkillsPicker
           value={skills}
-          onChange={(e) => setSkills(e.target.value)}
-          placeholder="למשל: הדרכת נוער, נהיגה, עזרה ראשונה…"
+          onChange={setSkills}
+          options={skillOptions}
+          canManage={false}
         />
       </Field>
 

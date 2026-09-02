@@ -286,7 +286,8 @@ CREATE POLICY "branches manage by admin"
 CREATE POLICY "profiles read self"
   ON profiles FOR SELECT TO authenticated
   USING (id = auth.uid() OR current_user_role() = 'admin' OR
-         (current_user_role() = 'service' AND branch_id = current_user_branch()));
+         (current_user_role() = 'service' AND branch_id = current_user_branch()) OR
+         (current_user_role() = 'service' AND role = 'instructor'));
 -- עדכון פרופיל: עצמי; admin את כולם; בת שירות את הצוות בסניף שלה.
 -- USING בודק את השורה הקיימת (על מי מותר לפעול); WITH CHECK בודק את
 -- השורה החדשה. לבת שירות ה-WITH CHECK מתירני יותר בכוונה — כדי שתוכל
@@ -298,6 +299,7 @@ CREATE POLICY "profiles update self"
     id = auth.uid()
     OR current_user_role() = 'admin'
     OR (current_user_role() = 'service' AND branch_id = current_user_branch())
+    OR (current_user_role() = 'service' AND role = 'instructor')
   )
   WITH CHECK (
     id = auth.uid()
