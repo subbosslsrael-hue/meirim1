@@ -18,14 +18,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-function makeIcon(idx, delivered) {
+// שלושה מצבים: נמסר (ירוק) · נלקח/בדרך (כחול) · ממתין ולא נלקח (כתום)
+function makeIcon(idx, { delivered, claimed }) {
+  const bg = delivered ? '#2E8B6F' : claimed ? '#0284C7' : '#D9651A'
   return L.divIcon({
     className: '',
     iconSize: [28, 28],
     iconAnchor: [14, 14],
     html: `<div style="
       width:28px;height:28px;border-radius:50%;
-      background:${delivered ? '#2E8B6F' : '#D9651A'};color:white;
+      background:${bg};color:white;
       display:flex;align-items:center;justify-content:center;
       font-weight:700;font-size:12px;font-family:Assistant,sans-serif;
       border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,.25);
@@ -81,25 +83,35 @@ export default function DistributionMap({ orderedStops }) {
         )}
         {orderedStops
           .filter((s) => s.family?.lat != null && s.family?.lng != null)
-          .map((s, idx) => (
-            <Marker
-              key={s.id}
-              position={[s.family.lat, s.family.lng]}
-              icon={makeIcon(idx + 1, s.delivered)}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <div className="font-bold">{s.family.name}</div>
-                  <div className="text-xs text-stone-500">
-                    {s.family.city}, {s.family.address}
+          .map((s, idx) => {
+            const claimed = !!s.claimed_by
+            // המצב נכלל ב-key כדי לאלץ את react-leaflet לרענן את הסיכה
+            // בעת לקיחה/ביטול/מסירה (עדכון prop של icon לבדו לא תמיד תופס).
+            const state = s.delivered ? 'd' : claimed ? 'c' : 'w'
+            return (
+              <Marker
+                key={`${s.id}-${state}`}
+                position={[s.family.lat, s.family.lng]}
+                icon={makeIcon(idx + 1, { delivered: s.delivered, claimed })}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <div className="font-bold">{s.family.name}</div>
+                    <div className="text-xs text-stone-500">
+                      {s.family.city}, {s.family.address}
+                    </div>
+                    <div className="text-xs mt-1">
+                      {s.delivered
+                        ? '✓ נמסר'
+                        : claimed
+                          ? `🧺 נלקח${s.claimer?.name ? ' · ' + s.claimer.name : ''}`
+                          : '⏳ ממתין'}
+                    </div>
                   </div>
-                  <div className="text-xs mt-1">
-                    {s.delivered ? '✓ נמסר' : '⏳ ממתין'}
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+                </Popup>
+              </Marker>
+            )
+          })}
         <FitBounds points={points} />
       </MapContainer>
     </div>

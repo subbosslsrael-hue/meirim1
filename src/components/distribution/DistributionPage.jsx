@@ -315,6 +315,10 @@ export default function DistributionPage() {
               נמסר
             </span>
             <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block" />{' '}
+              נלקח / בדרך
+            </span>
+            <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />{' '}
               ממתין
             </span>
