@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Plus,
   MapPin,
@@ -17,6 +17,7 @@ import LoadingScreen from '../shared/LoadingScreen'
 import DistributionMap from './DistributionMap'
 import StopsList from './StopsList'
 import { optimizeOrder, routeLengthKm } from '../../lib/route'
+import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDistributions } from '../../hooks/useDistributions'
 import { useFamilies } from '../../hooks/useFamilies'
@@ -34,6 +35,7 @@ export default function DistributionPage() {
   const [deletingDist, setDeletingDist] = useState(false)
   const [showArchivePrompt, setShowArchivePrompt] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [locating, setLocating] = useState(false)
   const [nform, setNform] = useState({
     name: '',
     dist_date: '',
@@ -48,6 +50,52 @@ export default function DistributionPage() {
     if (!dist) return []
     return optimizeOrder(dist.stops || [])
   }, [dist])
+
+  // השלמת קואורדינטות חסרות ליעדי החלוקה כדי שיופיעו במפה.
+  // רץ רק למנכ"ל/בת שירות (להם יש הרשאת UPDATE על families), פעם אחת
+  // לכל חלוקה נבחרת, עם השהיה בין בקשות (מדיניות Nominatim: ~בקשה לשנייה).
+  useEffect(() => {
+    const isAdminOrService =
+      profile?.role === 'admin' || profile?.role === 'service'
+    if (!isAdminOrService || !dist) return
+    const missing = (dist.stops || []).filter(
+      (s) => s.family && (s.family.lat == null || s.family.lng == null),
+    )
+    if (!missing.length) return
+
+    let cancelled = false
+    ;(async () => {
+      setLocating(true)
+      let changed = false
+      for (const s of missing) {
+        if (cancelled) break
+        const fam = s.family
+        let coords = await geocodeAddress({
+          city: fam.city,
+          address: fam.address,
+        })
+        if (!coords) coords = fallbackForCity(fam.city)
+        if (coords) {
+          const { error } = await supabase
+            .from('families')
+            .update({ lat: coords.lat, lng: coords.lng })
+            .eq('id', fam.id)
+          if (!error) changed = true
+        }
+        await new Promise((r) => setTimeout(r, 1100))
+      }
+      if (!cancelled) {
+        setLocating(false)
+        if (changed) await distributions.mutate()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // תלוי במזהה החלוקה בלבד — לא ב-dist עצמו — כדי לא להיכנס ללולאה אחרי mutate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dist?.id, profile?.role])
 
   if (distributions.loading) return <LoadingScreen message="טוען חלוקות…" />
 
@@ -85,6 +133,9 @@ export default function DistributionPage() {
   }
 
   const delivered = (dist.stops || []).filter((s) => s.delivered).length
+  const noCoords = (dist.stops || []).filter(
+    (s) => s.family && (s.family.lat == null || s.family.lng == null),
+  ).length
 
   const canClaimRole = !!profile?.id
 
@@ -326,6 +377,17 @@ export default function DistributionPage() {
               <Route size={12} /> מסלול מחושב לפי השכן הקרוב
             </span>
           </div>
+          {locating && (
+            <p className="text-[11px] text-sky-700 mt-2">
+              מאתר מיקומים חסרים ליעדים… המפה תתעדכן אוטומטית.
+            </p>
+          )}
+          {!locating && noCoords > 0 && (
+            <p className="text-[11px] text-amber-700 mt-2">
+              {noCoords} יעדים ללא מיקום מדויק אינם מוצגים במפה. עדכנו כתובת
+              מדויקת (רחוב ומספר) בכרטיס המשפחה כדי שיופיעו.
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">
