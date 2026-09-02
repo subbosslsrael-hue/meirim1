@@ -12,7 +12,11 @@ import Field, { inputCls } from '../shared/Field'
 import LoadingScreen from '../shared/LoadingScreen'
 import { useAuth } from '../../contexts/AuthContext'
 import { useBranches } from '../../hooks/useBranches'
-import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
+import {
+  normalizePhone,
+  isValidIsraeliPhone,
+  sanitizePhoneInput,
+} from '../../lib/phone'
 
 const ROLE_OPTIONS = [
   {
@@ -163,9 +167,11 @@ export default function RoleSelector() {
             <input
               className={inputCls}
               type="tel"
+              inputMode="numeric"
+              maxLength={10}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="050-1234567"
+              onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+              placeholder="0501234567"
             />
           </Field>
         )}

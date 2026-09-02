@@ -1,7 +1,11 @@
 import React, { useState } from 'react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
-import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
+import {
+  normalizePhone,
+  isValidIsraeliPhone,
+  sanitizePhoneInput,
+} from '../../lib/phone'
 
 // עריכת פרטים אישיים של איש צוות (שם / טלפון / גיל / מיומנות / סניף).
 // isSelf → כותרת "הפרטים שלי". canEditBranch → הצגת בחירת סניף (מנכ"ל בלבד).
@@ -73,9 +77,10 @@ export default function EditProfileModal({
           <input
             className={inputCls}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="05X-XXXXXXX"
-            inputMode="tel"
+            onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+            placeholder="0501234567"
+            inputMode="numeric"
+            maxLength={10}
           />
         </Field>
         <Field label="גיל">

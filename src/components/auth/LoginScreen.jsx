@@ -4,6 +4,7 @@ import Card from '../shared/Card'
 import Field, { inputCls } from '../shared/Field'
 import { useAuth } from '../../contexts/AuthContext'
 import { passwordValid } from '../../lib/password'
+import { sanitizePhoneInput } from '../../lib/phone'
 import PasswordStrength from './PasswordStrength'
 
 export default function LoginScreen() {
@@ -166,8 +167,12 @@ export default function LoginScreen() {
                 <input
                   className={inputCls}
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: sanitizePhoneInput(e.target.value) })
+                  }
                 />
               </Field>
             </>

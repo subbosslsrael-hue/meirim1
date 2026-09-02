@@ -3,7 +3,11 @@ import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { CATEGORIES } from '../../lib/constants'
 import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
-import { normalizePhone, isValidIsraeliPhone } from '../../lib/phone'
+import {
+  normalizePhone,
+  isValidIsraeliPhone,
+  sanitizePhoneInput,
+} from '../../lib/phone'
 
 export default function FamilyForm({
   onClose,
@@ -36,6 +40,17 @@ export default function FamilyForm({
   const submit = async () => {
     if (!form.name.trim()) {
       setError('יש להזין שם משפחה')
+      return
+    }
+    // כתובת מדויקת: חייבת לכלול גם שם רחוב (אותיות) וגם מספר בית (ספרות).
+    if (!form.address.trim()) {
+      setError('יש להזין כתובת')
+      return
+    }
+    const hasLetter = /\p{L}/u.test(form.address)
+    const hasDigit = /\d/.test(form.address)
+    if (!hasLetter || !hasDigit) {
+      setError('יש להזין כתובת מדויקת הכוללת שם רחוב ומספר בית (אותיות וגם מספרים)')
       return
     }
     if (!form.phone.trim()) {
@@ -115,15 +130,20 @@ export default function FamilyForm({
           className={inputCls}
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
+          placeholder="שם רחוב ומספר בית, למשל: הרצל 12"
         />
       </Field>
       <Field label="טלפון">
         <input
           className={inputCls}
           type="tel"
+          inputMode="numeric"
+          maxLength={10}
           value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          placeholder="050-1234567"
+          onChange={(e) =>
+            setForm({ ...form, phone: sanitizePhoneInput(e.target.value) })
+          }
+          placeholder="0501234567"
         />
       </Field>
       <Field label="סוג הצורך">
