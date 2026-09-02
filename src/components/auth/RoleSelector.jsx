@@ -10,8 +10,10 @@ import {
 import Card from '../shared/Card'
 import Field, { inputCls } from '../shared/Field'
 import LoadingScreen from '../shared/LoadingScreen'
+import SkillsPicker from '../activities/SkillsPicker'
 import { useAuth } from '../../contexts/AuthContext'
 import { useBranches } from '../../hooks/useBranches'
+import { useSkillOptions } from '../../hooks/useSkillOptions'
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -57,6 +59,7 @@ const ADMIN_NOTE = {
 export default function RoleSelector() {
   const { updateProfile, signOut, profile, user } = useAuth()
   const { data: branches, loading: branchesLoading } = useBranches()
+  const skillOptions = useSkillOptions()
   const [role, setRole] = useState(null)
   const [branchId, setBranchId] = useState('')
   const [skills, setSkills] = useState('')
@@ -86,6 +89,10 @@ export default function RoleSelector() {
     const opt = ROLE_OPTIONS.find((r) => r.id === role)
     if (opt.needsBranch && !branchId) {
       setError('יש לבחור סניף')
+      return
+    }
+    if (role === 'instructor' && !skills.trim()) {
+      setError('יש לבחור לפחות מיומנות אחת')
       return
     }
     setError(null)
@@ -207,12 +214,12 @@ export default function RoleSelector() {
         )}
 
         {role === 'instructor' && (
-          <Field label="מיומנויות (מופרדות בפסיק)">
-            <input
-              className={inputCls}
+          <Field label="מיומנויות — בחר/י מתוך הרשימה">
+            <SkillsPicker
               value={skills}
-              onChange={(e) => setSkills(e.target.value)}
-              placeholder="לדוגמה: ילדים, מוגבלויות"
+              onChange={setSkills}
+              options={skillOptions.data}
+              canManage={false}
             />
           </Field>
         )}
