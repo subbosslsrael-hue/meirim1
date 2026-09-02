@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useActivities } from '../../hooks/useActivities'
 import { useBranches } from '../../hooks/useBranches'
 import { useProfiles } from '../../hooks/useProfiles'
+import { useSkillOptions } from '../../hooks/useSkillOptions'
 import { supabase } from '../../lib/supabase'
 
 const NEXT_STATUS = {
@@ -24,6 +25,8 @@ export default function ActivitiesPage() {
   const activities = useActivities()
   const { data: branches } = useBranches()
   const { data: profiles } = useProfiles()
+  const skillOptions = useSkillOptions()
+  const isAdmin = profile?.role === 'admin'
 
   const instructors = profiles.filter((p) => p.role === 'instructor')
   const [filter, setFilter] = useState('הכל')
@@ -202,6 +205,10 @@ export default function ActivitiesPage() {
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
           lockBranch={profile?.role === 'service'}
+          skillOptions={skillOptions.data}
+          onAddSkillOption={skillOptions.insert}
+          onDeleteSkillOption={skillOptions.remove}
+          canManageSkills={isAdmin}
         />
       )}
 
@@ -214,6 +221,10 @@ export default function ActivitiesPage() {
           instructors={instructors}
           defaultBranchId={profile?.branch_id}
           lockBranch={profile?.role === 'service'}
+          skillOptions={skillOptions.data}
+          onAddSkillOption={skillOptions.insert}
+          onDeleteSkillOption={skillOptions.remove}
+          canManageSkills={isAdmin}
           onDelete={async () => {
             await activities.remove(editing.id)
           }}

@@ -2,7 +2,15 @@ import React, { useMemo, useState } from 'react'
 import { Star, Trash2 } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
+import SkillsPicker from './SkillsPicker'
 import { PROJECTS } from '../../lib/constants'
+
+// תאריך היום המקומי (YYYY-MM-DD) — בלי בעיות אזור-זמן של toISOString.
+const todayStr = () => {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
 const skillTokens = (s) =>
   String(s || '')
@@ -33,8 +41,13 @@ export default function ActivityForm({
   lockBranch = false,
   activity,
   onDelete,
+  skillOptions = [],
+  onAddSkillOption,
+  onDeleteSkillOption,
+  canManageSkills = false,
 }) {
   const isEdit = !!activity
+  const today = useMemo(() => todayStr(), [])
   const [form, setForm] = useState({
     name: activity?.name || '',
     project: activity?.project || PROJECTS[0],
@@ -78,6 +91,19 @@ export default function ActivityForm({
   const submit = async () => {
     if (!form.name.trim()) {
       setError('יש להזין תיאור פעילות')
+      return
+    }
+    if (!form.activity_date) {
+      setError('יש לבחור תאריך לפעילות')
+      return
+    }
+    // אין לקבוע תאריך שעבר. חריג: עריכת פעילות קיימת שתאריכה כבר בעבר
+    // ולא שונה — לא חוסמים כדי לאפשר עדכון פרטים היסטוריים.
+    if (
+      form.activity_date < today &&
+      form.activity_date !== activity?.activity_date
+    ) {
+      setError('לא ניתן לקבוע פעילות לתאריך שעבר')
       return
     }
     setBusy(true)
@@ -129,6 +155,7 @@ export default function ActivityForm({
             type="date"
             className={inputCls}
             value={form.activity_date}
+            min={today}
             onChange={(e) => setForm({ ...form, activity_date: e.target.value })}
           />
           {hebrewDay(form.activity_date) && (
@@ -177,12 +204,14 @@ export default function ActivityForm({
           </select>
         )}
       </Field>
-      <Field label="מיומנויות נדרשות (מופרדות בפסיק)">
-        <input
-          className={inputCls}
+      <Field label="מיומנויות נדרשות">
+        <SkillsPicker
           value={form.required_skills}
-          onChange={(e) => setForm({ ...form, required_skills: e.target.value })}
-          placeholder="לדוגמה: מוגבלויות, ילדים"
+          onChange={(v) => setForm((f) => ({ ...f, required_skills: v }))}
+          options={skillOptions}
+          onAddOption={onAddSkillOption}
+          onDeleteOption={onDeleteSkillOption}
+          canManage={canManageSkills}
         />
       </Field>
       <Field label="שיבוץ מדריכים — ממוינים לפי התאמת מיומנויות">
