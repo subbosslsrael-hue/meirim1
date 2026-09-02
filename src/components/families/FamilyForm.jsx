@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { CATEGORIES } from '../../lib/constants'
@@ -12,11 +13,13 @@ import {
 export default function FamilyForm({
   onClose,
   onSave,
+  onDelete,
   branches,
   profiles,
   defaultBranchId,
   defaultResponsibleId,
   family,
+  existingFamilies = [],
 }) {
   const isEdit = !!family
   const [form, setForm] = useState({
@@ -32,6 +35,8 @@ export default function FamilyForm({
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const serviceProfiles = profiles.filter(
     (p) => p.role === 'service' && p.branch_id === form.branch_id,
@@ -59,6 +64,26 @@ export default function FamilyForm({
     }
     if (!isValidIsraeliPhone(form.phone)) {
       setError('מספר הטלפון אינו תקין (לדוגמה: 050-1234567)')
+      return
+    }
+    // מניעת כפילויות: אותו טלפון, או אותו שם+עיר+כתובת, של משפחה אחרת במאגר.
+    const norm = (s) => (s || '').trim().toLowerCase()
+    const phoneKey = normalizePhone(form.phone)
+    const branchForCity = branches.find((b) => b.id === form.branch_id)
+    const cityKey = norm(form.city || branchForCity?.city || '')
+    const dup = existingFamilies.find((f) => {
+      if (isEdit && f.id === family.id) return false
+      const samePhone = phoneKey && normalizePhone(f.phone) === phoneKey
+      const sameNameAddr =
+        norm(f.name) === norm(form.name) &&
+        norm(f.city) === cityKey &&
+        norm(f.address) === norm(form.address)
+      return samePhone || sameNameAddr
+    })
+    if (dup) {
+      setError(
+        `כבר קיימת משפחה עם פרטים זהים במאגר ("${dup.name}"). לא ניתן לשמור כפילות.`,
+      )
       return
     }
     setBusy(true)
@@ -90,6 +115,18 @@ export default function FamilyForm({
       setError(err.message || 'שגיאה בשמירה')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    setError(null)
+    try {
+      await onDelete(family.id)
+      onClose()
+    } catch (err) {
+      setError(err.message || 'שגיאה במחיקה')
+      setDeleting(false)
     }
   }
 
@@ -191,11 +228,53 @@ export default function FamilyForm({
 
       <button
         onClick={submit}
-        disabled={busy}
+        disabled={busy || deleting}
         className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold mt-2"
       >
         {busy ? 'שומר ומאתר קואורדינטות…' : 'שמירה'}
       </button>
+
+      {isEdit && onDelete && (
+        <div className="mt-4 pt-4 border-t border-stone-100">
+          {!confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              disabled={busy || deleting}
+              className="w-full flex items-center justify-center gap-1.5 text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 py-2 rounded-xl font-semibold disabled:opacity-50"
+            >
+              <Trash2 size={15} /> הסרת המשפחה מהמאגר
+            </button>
+          ) : (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
+              <p className="text-sm text-rose-800 font-semibold mb-1">
+                למחוק את "{family.name}" לצמיתות?
+              </p>
+              <p className="text-xs text-rose-600 mb-3">
+                הפעולה תסיר את המשפחה מהמאגר ומכל יעדי החלוקה שלה. לא ניתן לבטל.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white py-2 rounded-xl font-semibold text-sm"
+                >
+                  {deleting ? 'מוחק…' : 'כן, מחק/י'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="flex-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 py-2 rounded-xl font-semibold text-sm"
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Modal>
   )
 }

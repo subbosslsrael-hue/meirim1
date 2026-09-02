@@ -56,6 +56,11 @@ export default function FamiliesPage() {
     setToast({ kind: 'ok', message: 'פרטי המשפחה עודכנו.' })
   }
 
+  const handleDelete = async (familyId) => {
+    await families.remove(familyId)
+    setToast({ kind: 'ok', message: 'המשפחה הוסרה מהמאגר.' })
+  }
+
   const handleImport = async (rows) => {
     const { error } = await supabase.from('families').insert(rows)
     if (error) throw error
@@ -178,6 +183,7 @@ export default function FamiliesPage() {
           onSave={handleAdd}
           branches={branches}
           profiles={profiles}
+          existingFamilies={families.data}
           defaultBranchId={profile?.branch_id}
           defaultResponsibleId={
             profile?.role === 'service' ? profile.id : undefined
@@ -190,8 +196,10 @@ export default function FamiliesPage() {
           family={editFamily}
           onClose={() => setEditFamily(null)}
           onSave={handleUpdate}
+          onDelete={handleDelete}
           branches={branches}
           profiles={profiles}
+          existingFamilies={families.data}
         />
       )}
 
