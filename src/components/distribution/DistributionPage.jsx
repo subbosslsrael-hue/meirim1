@@ -5,7 +5,8 @@ import {
   Navigation,
   Route,
   CheckCircle2,
-  Circle,
+  Square,
+  CheckSquare,
   Trash2,
   Pencil,
   Archive,
@@ -650,9 +651,9 @@ function NewDistributionModal({ onClose, onCreate, families, form, setForm }) {
                   {f.name} · {f.city}
                 </span>
                 {on ? (
-                  <CheckCircle2 size={15} />
+                  <CheckSquare size={15} />
                 ) : (
-                  <Circle size={15} className="text-stone-300" />
+                  <Square size={15} className="text-stone-300" />
                 )}
               </button>
             )
