@@ -18,14 +18,33 @@ export default function PendingDebriefGate() {
 
   const load = useCallback(async () => {
     if (!profile?.id) return
-    const { data } = await supabase
-      .from('activities')
-      .select('id, name, rating, activity_date, created_by')
-      .eq('created_by', profile.id)
-      .lt('activity_date', localToday())
-      .order('activity_date', { ascending: true })
-    setPending(data || [])
+    const today = localToday()
+    const build = (cols) =>
+      supabase
+        .from('activities')
+        .select(cols)
+        .eq('created_by', profile.id)
+        .lt('activity_date', today)
+        .order('activity_date', { ascending: true })
+    // ניסיון עם העמודה debrief_deferred; אם היא עוד לא קיימת ב-DB — נטען בלעדיה.
+    let { data, error } = await build(
+      'id, name, rating, activity_date, created_by, debrief_deferred',
+    )
+    if (error) {
+      const res = await build('id, name, rating, activity_date, created_by')
+      data = res.data
+    }
+    // פעילות ש"נדחתה" (דלג/לא התקיימה) לא חוסמת — היא נשארת בתזכורת בלוח הבקרה.
+    setPending((data || []).filter((a) => !a.debrief_deferred))
   }, [profile?.id])
+
+  const skip = useCallback(
+    async (id) => {
+      await supabase.rpc('defer_activity_debrief', { p_activity_id: id })
+      await load()
+    },
+    [load],
+  )
 
   useEffect(() => {
     load()
@@ -39,6 +58,7 @@ export default function PendingDebriefGate() {
       activity={pending[0]}
       blocking
       onDone={load}
+      onSkip={() => skip(pending[0].id)}
     />
   )
 }

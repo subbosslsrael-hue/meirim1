@@ -66,6 +66,7 @@ CREATE TABLE activities (
   activity_time TEXT,                       -- שעת הפעילות (נשמרת כמחרוזת "HH:MM")
   location TEXT,                            -- מיקום/כתובת הפעילות
   created_by UUID REFERENCES profiles(id), -- מי יצר את הפעילות
+  debrief_deferred BOOLEAN DEFAULT FALSE,  -- "דלג/לא התקיימה": לא חוסם, אך נשאר בתזכורת בלוח הבקרה
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -658,6 +659,25 @@ BEGIN
   DELETE FROM activities WHERE id = p_activity_id;
 END;
 $$;
+
+-- "דלג/לא התקיימה" לתחקור החוסם: מסמן את הפעילות כנדחתה כך שתפסיק לחסום
+-- בכניסה, אך נשארת ברשימה ובתזכורת בלוח הבקרה. SECURITY DEFINER כדי
+-- שיעבוד לכל יוצר (למדריכים אין UPDATE ישיר על activities); רק היוצר או
+-- מנכ"ל רשאים לדחות.
+CREATE OR REPLACE FUNCTION defer_activity_debrief(p_activity_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE activities
+    SET debrief_deferred = TRUE
+    WHERE id = p_activity_id
+      AND (created_by = auth.uid() OR current_user_role() = 'admin');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION defer_activity_debrief(UUID) TO authenticated;
 
 -- ארכוב חלוקה ידני (מקביל לטריגר archive_completed_distribution האוטומטי).
 -- נקרא מ-DistributionPage עם p_dist_id.
