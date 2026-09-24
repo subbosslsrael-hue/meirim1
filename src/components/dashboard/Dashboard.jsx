@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   MapPin,
   Megaphone,
+  UserCheck,
 } from 'lucide-react'
 import {
   BarChart,
@@ -159,6 +160,7 @@ export default function Dashboard({ onNavigate }) {
   // ── סטטיסטיקות לפי תפקיד ─────────────────────────────────────────
   const volunteerCount = profiles.filter((p) => p.role === 'volunteer').length
   const instructorCount = profiles.filter((p) => p.role === 'instructor').length
+  const serviceCount = profiles.filter((p) => p.role === 'service').length
   const totalHours = reports.reduce((s, r) => s + Number(r.hours || 0), 0)
   const upcomingCount = activities.filter(
     (a) => a.activity_date && a.activity_date >= today,
@@ -242,6 +244,7 @@ export default function Dashboard({ onNavigate }) {
             <Stat icon={Activity} label="פעילויות פעילות" value={activities.length} tone="green" />
             <Stat icon={HandHeart} label="מתנדבים" value={volunteerCount} tone="rose" />
             <Stat icon={Briefcase} label="מדריכים" value={instructorCount} tone="blue" />
+            <Stat icon={UserCheck} label="בנות שירות" value={serviceCount} tone="amber" />
             <Stat icon={Clock} label="סה״כ שעות מדווחות" value={totalHours} tone="blue" />
           </>
         )}

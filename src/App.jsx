@@ -49,10 +49,12 @@ const ALL_TABS = [
 ]
 
 const TABS_BY_ROLE = {
-  admin: ALL_TABS.map((t) => t.id),
-  // בת שירות רואה הכל מלבד "אפיון ותיעוד" ו"בקשות כניסה" (למנכ"ל בלבד)
+  // "המיומנויות שלי" מיועד למדריכים בלבד — לא למנכ"ל.
+  admin: ALL_TABS.map((t) => t.id).filter((id) => id !== 'myskills'),
+  // בת שירות רואה הכל מלבד "אפיון ותיעוד", "בקשות כניסה" (למנכ"ל בלבד)
+  // ו"המיומנויות שלי" (למדריכים בלבד).
   service: ALL_TABS.map((t) => t.id).filter(
-    (id) => id !== 'docs' && id !== 'requests',
+    (id) => id !== 'docs' && id !== 'requests' && id !== 'myskills',
   ),
   instructor: [
     'dashboard',
