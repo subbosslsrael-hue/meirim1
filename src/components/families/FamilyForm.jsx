@@ -67,6 +67,10 @@ export default function FamilyForm({
       setError('מספר הטלפון אינו תקין (לדוגמה: 050-1234567)')
       return
     }
+    if (!form.responsible_profile_id) {
+      setError('יש לבחור בת שירות אחראית')
+      return
+    }
     // מניעת כפילויות. חשוב: בת שירות רואה (דרך RLS) רק את סניפה, ולכן בדיקה
     // מקומית לא תתפוס כפילות מסניף אחר. הבדיקה נעשית בשרת דרך RPC ב-SECURITY
     // DEFINER שמחזירה true/false בלבד — מבלי לחשוף פרטי משפחות מסניפים אחרים.
@@ -221,13 +225,18 @@ export default function FamilyForm({
             setForm({ ...form, responsible_profile_id: e.target.value })
           }
         >
-          <option value="">— ללא שיוך —</option>
+          <option value="">— בחר/י בת שירות —</option>
           {serviceProfiles.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </select>
+        {serviceProfiles.length === 0 && (
+          <p className="text-[11px] text-amber-700 mt-1">
+            אין בנות שירות משויכות לסניף זה — יש להוסיף בת שירות לסניף כדי לשייך.
+          </p>
+        )}
       </Field>
       <Field label="הערות">
         <textarea
