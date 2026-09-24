@@ -8,6 +8,7 @@ import {
   HandHeart,
   Star,
   Pencil,
+  ShieldCheck,
 } from 'lucide-react'
 import Card from '../shared/Card'
 import LoadingScreen from '../shared/LoadingScreen'
@@ -18,6 +19,13 @@ import { useBranches } from '../../hooks/useBranches'
 import { useSkillOptions } from '../../hooks/useSkillOptions'
 import { supabase } from '../../lib/supabase'
 
+// קבוצת מנכ"ל/הנהלה מוצגת רק למנכ"ל (רק לו יש הרשאת RLS לקרוא פרופילי מנכ"לים).
+const ADMIN_GROUP = {
+  role: 'admin',
+  label: 'מנכ״ל / הנהלה',
+  icon: ShieldCheck,
+  cls: 'text-emerald-600',
+}
 const GROUPS = [
   { role: 'service', label: 'בנות שירות', icon: UserCheck, cls: 'text-amber-600' },
   { role: 'instructor', label: 'מדריכים', icon: Briefcase, cls: 'text-sky-600' },
@@ -74,7 +82,7 @@ export default function TeamPage() {
         </h2>
         <p className="text-sm text-stone-500">
           {isAdmin
-            ? 'כל בנות השירות, המדריכים והמתנדבים במערכת.'
+            ? 'כל ההנהלה, בנות השירות, המדריכים והמתנדבים במערכת.'
             : 'כל מי שמשויך לסניף שלך.'}
         </p>
       </div>
@@ -92,7 +100,8 @@ export default function TeamPage() {
         />
       </div>
 
-      {GROUPS.map(({ role, label, icon: Icon, cls }) => {
+      {(isAdmin ? [ADMIN_GROUP, ...GROUPS] : GROUPS).map(
+        ({ role, label, icon: Icon, cls }) => {
         const members = people.filter((p) => p.role === role)
         if (!members.length) return null
         return (
