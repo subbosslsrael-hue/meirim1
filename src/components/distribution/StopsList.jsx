@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Camera,
-  CheckSquare,
+  SquareCheck,
   Square,
   HandHeart,
   Image as ImageIcon,
@@ -159,7 +159,7 @@ function StopRow({
               : 'bg-white border border-stone-200 text-stone-500'
           } disabled:opacity-40 disabled:cursor-not-allowed`}
         >
-          {stop.delivered ? <CheckSquare size={14} /> : <Square size={14} />}
+          {stop.delivered ? <SquareCheck size={14} /> : <Square size={14} />}
           {stop.delivered ? 'נמסר' : 'סמן'}
         </button>
       </div>

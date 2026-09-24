@@ -6,7 +6,7 @@ import {
   Route,
   CheckCircle2,
   Square,
-  CheckSquare,
+  SquareCheck,
   Trash2,
   Pencil,
   Archive,
@@ -651,7 +651,7 @@ function NewDistributionModal({ onClose, onCreate, families, form, setForm }) {
                   {f.name} · {f.city}
                 </span>
                 {on ? (
-                  <CheckSquare size={15} />
+                  <SquareCheck size={15} />
                 ) : (
                   <Square size={15} className="text-stone-300" />
                 )}
