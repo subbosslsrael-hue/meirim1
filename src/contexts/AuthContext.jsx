@@ -9,6 +9,12 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+// ניקוי קלט אימות: אימייל — הסרת רווחים והקטנת אותיות; סיסמה — הסרת רווחים
+// בקצוות (מקלדות נייד/מילוי-אוטומטי מוסיפים לעיתים רווח נסתר שגורם ל-
+// "Invalid login credentials" למרות שהכול הוקלד נכון).
+const cleanEmail = (e) => (e || '').trim().toLowerCase()
+const cleanPassword = (p) => (p || '').trim()
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -95,8 +101,8 @@ export function AuthProvider({ children }) {
 
   const signUp = useCallback(async ({ email, password, name, phone }) => {
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: cleanEmail(email),
+      password: cleanPassword(password),
       options: {
         data: { name, phone },
       },
@@ -107,8 +113,8 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: cleanEmail(email),
+      password: cleanPassword(password),
     })
     if (error) throw error
     return data
@@ -131,9 +137,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   const resetPassword = useCallback(async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    })
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      cleanEmail(email),
+      {
+        redirectTo: window.location.origin,
+      },
+    )
     if (error) throw error
   }, [])
 
