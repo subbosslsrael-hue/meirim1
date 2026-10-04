@@ -27,12 +27,16 @@ export async function geocodeAddress({ city, address, country = 'Israel' }) {
 // מחזיר עד `limit` תוצאות אמיתיות בישראל, כולל קואורדינטות — כך שכתובת
 // שנבחרת מהרשימה תמיד ניתנת למיפוי. מכבד מדיניות Nominatim (יש להשהות
 // בין הקלדות בצד הקורא; כאן רק בקשה בודדת).
-export async function searchAddresses(query, { limit = 6, signal } = {}) {
+export async function searchAddresses(query, { limit = 6, signal, city } = {}) {
   const q = (query || '').trim()
   if (q.length < 3) return []
-  const url =
-    `https://nominatim.openstreetmap.org/search?format=jsonv2` +
-    `&addressdetails=1&countrycodes=il&limit=${limit}&q=${encodeURIComponent(q)}`
+  const cityName = (city || '').trim()
+  // אם ידועה עיר — חיפוש מובנה (street בתוך city) כדי להגביל לאותה עיר בלבד.
+  // אחרת — חיפוש טקסט חופשי רגיל.
+  const base = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=il&limit=${limit}`
+  const url = cityName
+    ? `${base}&street=${encodeURIComponent(q)}&city=${encodeURIComponent(cityName)}`
+    : `${base}&q=${encodeURIComponent(q)}`
   try {
     const res = await fetch(url, {
       headers: { 'Accept-Language': 'he' },

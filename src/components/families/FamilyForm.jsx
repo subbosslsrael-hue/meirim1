@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Trash2 } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { supabase } from '../../lib/supabase'
 import { CATEGORIES } from '../../lib/constants'
 import AddressAutocomplete from './AddressAutocomplete'
-import { searchCities } from '../../lib/geocode'
+import { searchAddresses, searchCities } from '../../lib/geocode'
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -51,6 +51,14 @@ export default function FamilyForm({
 
   const serviceProfiles = profiles.filter(
     (p) => p.role === 'service' && p.branch_id === form.branch_id,
+  )
+
+  // חיפוש כתובת מוגבל לעיר שנבחרה/הוקלדה (אם יש); אחרת חיפוש חופשי.
+  const branchCity = branches.find((b) => b.id === form.branch_id)?.city || ''
+  const scopeCity = form.city || branchCity
+  const addressFetcher = useCallback(
+    (q, opts) => searchAddresses(q, { ...opts, city: scopeCity }),
+    [scopeCity],
   )
 
   const submit = async () => {
@@ -200,6 +208,7 @@ export default function FamilyForm({
         <AddressAutocomplete
           value={form.address}
           picked={!!pickedCoords}
+          fetcher={addressFetcher}
           onType={(v) => {
             // הקלדה ידנית מבטלת בחירה קודמת — חובה לבחור שוב מהרשימה.
             setForm((f) => ({ ...f, address: v }))
@@ -214,7 +223,11 @@ export default function FamilyForm({
             setPickedCoords({ lat: r.lat, lng: r.lng })
             if (r.city) setCityPicked(true)
           }}
-          placeholder="הקלד/י עיר + רחוב + מספר, ובחר/י מהרשימה"
+          placeholder={
+            scopeCity
+              ? `רחוב ומספר ב${scopeCity} — בחר/י מהרשימה`
+              : 'הקלד/י עיר + רחוב + מספר, ובחר/י מהרשימה'
+          }
         />
       </Field>
       <Field label="טלפון">
