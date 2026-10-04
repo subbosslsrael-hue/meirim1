@@ -17,6 +17,8 @@ export default function AddressAutocomplete({
   onType,
   picked,
   placeholder,
+  fetcher = searchAddresses,
+  minChars = 3,
 }) {
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -34,7 +36,7 @@ export default function AddressAutocomplete({
       return
     }
     const q = (value || '').trim()
-    if (q.length < 3) {
+    if (q.length < minChars) {
       setResults([])
       setOpen(false)
       setLoading(false)
@@ -45,14 +47,14 @@ export default function AddressAutocomplete({
       abortRef.current?.abort()
       const ctrl = new AbortController()
       abortRef.current = ctrl
-      const rows = await searchAddresses(q, { signal: ctrl.signal })
+      const rows = await fetcher(q, { signal: ctrl.signal })
       setResults(rows)
       setOpen(true)
       setActive(-1)
       setLoading(false)
     }, 450)
     return () => clearTimeout(t)
-  }, [value])
+  }, [value, fetcher, minChars])
 
   // סגירה בלחיצה מחוץ לרכיב
   useEffect(() => {
@@ -131,7 +133,7 @@ export default function AddressAutocomplete({
         </ul>
       )}
 
-      {open && !loading && results.length === 0 && (value || '').trim().length >= 3 && (
+      {open && !loading && results.length === 0 && (value || '').trim().length >= minChars && (
         <div className="absolute z-[50] mt-1 w-full bg-white border border-stone-200 rounded-xl shadow-lg px-3 py-2 text-sm text-stone-400">
           לא נמצאו כתובות תואמות. נסה/י לדייק (עיר + רחוב + מספר).
         </div>

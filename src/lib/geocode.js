@@ -61,6 +61,39 @@ export async function searchAddresses(query, { limit = 6, signal } = {}) {
   }
 }
 
+// חיפוש יישובים/ערים בישראל להשלמה אוטומטית של שדה העיר.
+export async function searchCities(query, { limit = 6, signal } = {}) {
+  const q = (query || '').trim()
+  if (q.length < 2) return []
+  const url =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2` +
+    `&addressdetails=1&countrycodes=il&featureType=settlement` +
+    `&limit=${limit}&q=${encodeURIComponent(q)}`
+  try {
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'he' },
+      signal,
+    })
+    if (!res.ok) return []
+    const rows = await res.json()
+    return rows
+      .map((r) => {
+        const a = r.address || {}
+        const city =
+          a.city || a.town || a.village || a.municipality || r.name || ''
+        return {
+          label: r.display_name,
+          city,
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }
+      })
+      .filter((r) => r.city)
+  } catch {
+    return []
+  }
+}
+
 // קואורדינטות ברירת מחדל לערים בדרום — אם geocode נכשל
 export const CITY_FALLBACK = {
   שדרות: { lat: 31.5246, lng: 34.5957 },

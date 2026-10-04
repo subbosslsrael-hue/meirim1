@@ -5,6 +5,7 @@ import Field, { inputCls } from '../shared/Field'
 import { supabase } from '../../lib/supabase'
 import { CATEGORIES } from '../../lib/constants'
 import AddressAutocomplete from './AddressAutocomplete'
+import { searchCities } from '../../lib/geocode'
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -45,6 +46,8 @@ export default function FamilyForm({
       ? { lat: family.lat, lng: family.lng }
       : null,
   )
+  // סימון ויזואלי בלבד שהעיר נבחרה מהרשימה (לא נדרש — אפשר גם ברירת מחדל לפי סניף).
+  const [cityPicked, setCityPicked] = useState(isEdit && !!family?.city)
 
   const serviceProfiles = profiles.filter(
     (p) => p.role === 'service' && p.branch_id === form.branch_id,
@@ -176,11 +179,20 @@ export default function FamilyForm({
           </select>
         </Field>
         <Field label="עיר">
-          <input
-            className={inputCls}
+          <AddressAutocomplete
             value={form.city}
-            onChange={(e) => setForm({ ...form, city: e.target.value })}
-            placeholder="ברירת מחדל לפי הסניף"
+            picked={cityPicked && !!form.city}
+            minChars={2}
+            fetcher={searchCities}
+            onType={(v) => {
+              setForm((f) => ({ ...f, city: v }))
+              setCityPicked(false)
+            }}
+            onPick={(r) => {
+              setForm((f) => ({ ...f, city: r.city || r.label }))
+              setCityPicked(true)
+            }}
+            placeholder="בחר/י עיר מהרשימה (ברירת מחדל לפי הסניף)"
           />
         </Field>
       </div>
@@ -200,6 +212,7 @@ export default function FamilyForm({
               city: r.city || f.city,
             }))
             setPickedCoords({ lat: r.lat, lng: r.lng })
+            if (r.city) setCityPicked(true)
           }}
           placeholder="הקלד/י עיר + רחוב + מספר, ובחר/י מהרשימה"
         />
