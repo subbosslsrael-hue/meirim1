@@ -23,6 +23,44 @@ export async function geocodeAddress({ city, address, country = 'Israel' }) {
   }
 }
 
+// חיפוש כתובות להשלמה אוטומטית (autocomplete) מתוך מאגר OSM/Nominatim.
+// מחזיר עד `limit` תוצאות אמיתיות בישראל, כולל קואורדינטות — כך שכתובת
+// שנבחרת מהרשימה תמיד ניתנת למיפוי. מכבד מדיניות Nominatim (יש להשהות
+// בין הקלדות בצד הקורא; כאן רק בקשה בודדת).
+export async function searchAddresses(query, { limit = 6, signal } = {}) {
+  const q = (query || '').trim()
+  if (q.length < 3) return []
+  const url =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2` +
+    `&addressdetails=1&countrycodes=il&limit=${limit}&q=${encodeURIComponent(q)}`
+  try {
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'he' },
+      signal,
+    })
+    if (!res.ok) return []
+    const rows = await res.json()
+    return rows.map((r) => {
+      const a = r.address || {}
+      const city =
+        a.city || a.town || a.village || a.municipality || a.county || ''
+      const road = a.road || a.pedestrian || a.neighbourhood || ''
+      const house = a.house_number || ''
+      const street = [road, house].filter(Boolean).join(' ')
+      return {
+        label: r.display_name,
+        street: street || road || r.name || '',
+        city,
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+      }
+    })
+  } catch {
+    // ביטול (abort) של בקשה ישנה, או כשל רשת — מחזירים ריק בשקט.
+    return []
+  }
+}
+
 // קואורדינטות ברירת מחדל לערים בדרום — אם geocode נכשל
 export const CITY_FALLBACK = {
   שדרות: { lat: 31.5246, lng: 34.5957 },

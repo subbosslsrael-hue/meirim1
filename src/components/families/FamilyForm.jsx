@@ -4,7 +4,7 @@ import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import { supabase } from '../../lib/supabase'
 import { CATEGORIES } from '../../lib/constants'
-import { geocodeAddress, fallbackForCity } from '../../lib/geocode'
+import AddressAutocomplete from './AddressAutocomplete'
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -38,6 +38,13 @@ export default function FamilyForm({
   const [error, setError] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // קואורדינטות שנבחרו מתוך ההשלמה האוטומטית (כתובת אמיתית מהמאגר).
+  // בעריכה, אם הכתובת כבר קיימת ולא שונתה — נחשיב אותה כ"נבחרה".
+  const [pickedCoords, setPickedCoords] = useState(
+    isEdit && family?.lat != null && family?.lng != null
+      ? { lat: family.lat, lng: family.lng }
+      : null,
+  )
 
   const serviceProfiles = profiles.filter(
     (p) => p.role === 'service' && p.branch_id === form.branch_id,
@@ -48,15 +55,14 @@ export default function FamilyForm({
       setError('יש להזין שם משפחה')
       return
     }
-    // כתובת מדויקת: חייבת לכלול גם שם רחוב (אותיות) וגם מספר בית (ספרות).
+    // כתובת: חייבת להיבחר מתוך רשימת ההשלמה האוטומטית (כתובת אמיתית מהמאגר),
+    // כך שתמיד יש לה קואורדינטות והיא מופיעה במפה.
     if (!form.address.trim()) {
       setError('יש להזין כתובת')
       return
     }
-    const hasLetter = /\p{L}/u.test(form.address)
-    const hasDigit = /\d/.test(form.address)
-    if (!hasLetter || !hasDigit) {
-      setError('יש להזין כתובת מדויקת הכוללת שם רחוב ומספר בית (אותיות וגם מספרים)')
+    if (!pickedCoords) {
+      setError('יש לבחור כתובת מתוך רשימת ההשלמה (הקלד/י ובחר/י כתובת מהרשימה)')
       return
     }
     if (!form.phone.trim()) {
@@ -114,17 +120,10 @@ export default function FamilyForm({
         return
       }
 
-      // גאוקוד מחדש רק אם הכתובת/עיר השתנו (או במשפחה חדשה)
-      let lat = family?.lat ?? null
-      let lng = family?.lng ?? null
-      const addressChanged =
-        !isEdit || city !== family.city || form.address !== family.address
-      if (addressChanged) {
-        let coords = await geocodeAddress({ city, address: form.address })
-        if (!coords) coords = fallbackForCity(city)
-        lat = coords?.lat ?? null
-        lng = coords?.lng ?? null
-      }
+      // הקואורדינטות מגיעות ישירות מהכתובת שנבחרה בהשלמה האוטומטית —
+      // אין צורך בגאוקוד נוסף, והמיקום מובטח.
+      const lat = pickedCoords.lat
+      const lng = pickedCoords.lng
       await onSave({
         ...form,
         city,
@@ -185,12 +184,24 @@ export default function FamilyForm({
           />
         </Field>
       </div>
-      <Field label="כתובת">
-        <input
-          className={inputCls}
+      <Field label="כתובת (בחירה מרשימת כתובות אמיתיות)">
+        <AddressAutocomplete
           value={form.address}
-          onChange={(e) => setForm({ ...form, address: e.target.value })}
-          placeholder="שם רחוב ומספר בית, למשל: הרצל 12"
+          picked={!!pickedCoords}
+          onType={(v) => {
+            // הקלדה ידנית מבטלת בחירה קודמת — חובה לבחור שוב מהרשימה.
+            setForm((f) => ({ ...f, address: v }))
+            setPickedCoords(null)
+          }}
+          onPick={(r) => {
+            setForm((f) => ({
+              ...f,
+              address: r.street || r.label,
+              city: r.city || f.city,
+            }))
+            setPickedCoords({ lat: r.lat, lng: r.lng })
+          }}
+          placeholder="הקלד/י עיר + רחוב + מספר, ובחר/י מהרשימה"
         />
       </Field>
       <Field label="טלפון">
