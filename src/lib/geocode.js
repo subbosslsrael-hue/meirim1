@@ -27,38 +27,43 @@ export async function geocodeAddress({ city, address, country = 'Israel' }) {
 // מחזיר עד `limit` תוצאות אמיתיות בישראל, כולל קואורדינטות — כך שכתובת
 // שנבחרת מהרשימה תמיד ניתנת למיפוי. מכבד מדיניות Nominatim (יש להשהות
 // בין הקלדות בצד הקורא; כאן רק בקשה בודדת).
+const mapAddressRow = (r) => {
+  const a = r.address || {}
+  const city = a.city || a.town || a.village || a.municipality || a.county || ''
+  const road = a.road || a.pedestrian || a.neighbourhood || ''
+  const house = a.house_number || ''
+  const street = [road, house].filter(Boolean).join(' ')
+  return {
+    label: r.display_name,
+    street: street || road || r.name || '',
+    city,
+    lat: parseFloat(r.lat),
+    lng: parseFloat(r.lon),
+  }
+}
+
+async function nominatimQuery(q, limit, signal) {
+  const url =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2` +
+    `&addressdetails=1&countrycodes=il&limit=${limit}&q=${encodeURIComponent(q)}`
+  const res = await fetch(url, { headers: { 'Accept-Language': 'he' }, signal })
+  if (!res.ok) return []
+  const rows = await res.json()
+  return rows.map(mapAddressRow)
+}
+
 export async function searchAddresses(query, { limit = 6, signal, city } = {}) {
   const q = (query || '').trim()
   if (q.length < 3) return []
   const cityName = (city || '').trim()
-  // אם ידועה עיר — חיפוש מובנה (street בתוך city) כדי להגביל לאותה עיר בלבד.
-  // אחרת — חיפוש טקסט חופשי רגיל.
-  const base = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=il&limit=${limit}`
-  const url = cityName
-    ? `${base}&street=${encodeURIComponent(q)}&city=${encodeURIComponent(cityName)}`
-    : `${base}&q=${encodeURIComponent(q)}`
   try {
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'he' },
-      signal,
-    })
-    if (!res.ok) return []
-    const rows = await res.json()
-    return rows.map((r) => {
-      const a = r.address || {}
-      const city =
-        a.city || a.town || a.village || a.municipality || a.county || ''
-      const road = a.road || a.pedestrian || a.neighbourhood || ''
-      const house = a.house_number || ''
-      const street = [road, house].filter(Boolean).join(' ')
-      return {
-        label: r.display_name,
-        street: street || road || r.name || '',
-        city,
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lon),
-      }
-    })
+    // חיפוש טקסט חופשי (סלחני ומכסה הרבה יותר מחיפוש מובנה): קודם ממוקד לעיר,
+    // ואם לא נמצא כלום — ניסיון חוזר בלי העיר (למקרה שהעיר לא ממופה בדיוק).
+    if (cityName) {
+      const scoped = await nominatimQuery(`${q}, ${cityName}`, limit, signal)
+      if (scoped.length) return scoped
+    }
+    return await nominatimQuery(q, limit, signal)
   } catch {
     // ביטול (abort) של בקשה ישנה, או כשל רשת — מחזירים ריק בשקט.
     return []
