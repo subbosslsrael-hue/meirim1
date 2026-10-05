@@ -4,7 +4,12 @@
 ALTER TABLE activity_archives
   ADD COLUMN IF NOT EXISTS required_skills TEXT;
 
-CREATE OR REPLACE FUNCTION archive_activity(
+-- DROP first: the existing function has parameter defaults, and CREATE OR
+-- REPLACE cannot remove them (ERROR 42P13). Dropping + recreating is safe -
+-- the client always calls it with all 5 arguments.
+DROP FUNCTION IF EXISTS archive_activity(uuid, text, text, integer, jsonb);
+
+CREATE FUNCTION archive_activity(
   p_activity_id UUID,
   p_good        TEXT,
   p_improve     TEXT,
