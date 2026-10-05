@@ -347,7 +347,7 @@ export default function FamilyForm({
           ) : (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
               <p className="text-sm text-rose-800 font-semibold mb-1">
-                למחוק את "{family.name}" לצמיתות?
+                האם בטוח למחוק את פרטי המשפחה?
               </p>
               <p className="text-xs text-rose-600 mb-3">
                 הפעולה תסיר את המשפחה מהמאגר ומכל יעדי החלוקה שלה. לא ניתן לבטל.
