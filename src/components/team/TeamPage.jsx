@@ -53,6 +53,19 @@ export default function TeamPage() {
     (isService && p.branch_id && p.branch_id === profile?.branch_id) ||
     (isService && p.role === 'instructor')
 
+  // הרשאת מחיקה: לא את עצמי, לא מנכ"לים. מנכ"ל מוחק כל מי שאינו מנכ"ל;
+  // בת שירות מוחקת מדריכים/מתנדבים בסניף שלה.
+  const canDelete = (p) => {
+    if (!p || p.id === profile?.id || p.role === 'admin') return false
+    if (isAdmin) return true
+    if (isService)
+      return (
+        (p.role === 'volunteer' || p.role === 'instructor') &&
+        p.branch_id === profile?.branch_id
+      )
+    return false
+  }
+
   const saveProfile = async (updates) => {
     // עדכון ישיר ללא .select(): כשבת שירות מעבירה איש צוות לסניף אחר
     // השורה כבר לא נראית לה, ו-RETURNING היה נכשל. לאחר מכן טוענים מחדש.
@@ -63,6 +76,18 @@ export default function TeamPage() {
     if (error) throw error
     await profiles.mutate()
     if (editing.id === profile?.id) await refreshProfile()
+  }
+
+  const deleteProfile = async (id) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id)
+      .select()
+    if (error) throw error
+    if (!data || data.length === 0)
+      throw new Error('לא ניתן למחוק — ייתכן שאין לך הרשאה.')
+    await profiles.mutate()
   }
   const term = q.trim()
   const people = profiles.data.filter((p) =>
@@ -177,6 +202,14 @@ export default function TeamPage() {
           skillOptions={skillOptions.data}
           onClose={() => setEditing(null)}
           onSave={saveProfile}
+          onDelete={
+            canDelete(editing)
+              ? async () => {
+                  await deleteProfile(editing.id)
+                  setEditing(null)
+                }
+              : undefined
+          }
         />
       )}
     </div>

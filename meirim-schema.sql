@@ -41,7 +41,7 @@ CREATE TABLE families (
   phone TEXT,
   need_category TEXT,
   branch_id UUID REFERENCES branches(id),
-  responsible_profile_id UUID REFERENCES profiles(id),
+  responsible_profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   lat NUMERIC,
   lng NUMERIC,
   door_photo_url TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE activities (
   debrief_note TEXT,
   activity_time TEXT,                       -- שעת הפעילות (נשמרת כמחרוזת "HH:MM")
   location TEXT,                            -- מיקום/כתובת הפעילות
-  created_by UUID REFERENCES profiles(id), -- מי יצר את הפעילות
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL, -- מי יצר את הפעילות
   debrief_deferred BOOLEAN DEFAULT FALSE,  -- "דלג/לא התקיימה": לא חוסם, אך נשאר בתזכורת בלוח הבקרה
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -104,7 +104,7 @@ CREATE TABLE distribution_stops (
   delivered_at TIMESTAMPTZ,
   photo_url TEXT,
   route_order INT,
-  claimed_by UUID REFERENCES profiles(id),
+  claimed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   UNIQUE (distribution_id, family_id)
 );
 
@@ -310,6 +310,18 @@ CREATE POLICY "profiles update self"
 CREATE POLICY "profiles insert by admin or self"
   ON profiles FOR INSERT TO authenticated
   WITH CHECK (id = auth.uid() OR current_user_role() = 'admin');
+-- מחיקת משתמשים: מנכ"ל מוחק כל מי שאינו מנכ"ל; בת שירות מוחקת
+-- מדריכים/מתנדבים בסניף שלה בלבד.
+CREATE POLICY "profiles delete"
+  ON profiles FOR DELETE TO authenticated
+  USING (
+    (current_user_role() = 'admin' AND role <> 'admin')
+    OR (
+      current_user_role() = 'service'
+      AND (role = 'volunteer' OR role = 'instructor')
+      AND branch_id = current_user_branch()
+    )
+  );
 
 -- משפחות: admin הכל; service לסניף שלו;
 -- volunteer/instructor רואים רק משפחות שמופיעות בחלוקות (קריאה בלבד)
