@@ -89,6 +89,30 @@ export default function TeamPage() {
       throw new Error('לא ניתן למחוק — ייתכן שאין לך הרשאה.')
     await profiles.mutate()
   }
+
+  // החלפת בת שירות (מנכ"ל): ממנה משתמש קיים לבת שירות באותו סניף,
+  // מעביר אליו את המשפחות של הקודמת, ומוחק את הקודמת.
+  const replaceService = async (oldSw, newId) => {
+    // 1. מינוי החדש/ה לבת שירות באותו סניף + אישור.
+    const { error: e1 } = await supabase
+      .from('profiles')
+      .update({ role: 'service', branch_id: oldSw.branch_id, approved: true })
+      .eq('id', newId)
+    if (e1) throw e1
+    // 2. העברת המשפחות שבאחריות הקודמת לחדש/ה.
+    const { error: e2 } = await supabase
+      .from('families')
+      .update({ responsible_profile_id: newId })
+      .eq('responsible_profile_id', oldSw.id)
+    if (e2) throw e2
+    // 3. מחיקת בת השירות הקודמת.
+    const { error: e3 } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', oldSw.id)
+    if (e3) throw e3
+    await profiles.mutate()
+  }
   const term = q.trim()
   const people = profiles.data.filter((p) =>
     [p.name, p.phone, p.branch?.name, p.skills]
@@ -206,6 +230,21 @@ export default function TeamPage() {
             canDelete(editing)
               ? async () => {
                   await deleteProfile(editing.id)
+                  setEditing(null)
+                }
+              : undefined
+          }
+          replaceCandidates={
+            isAdmin && editing.role === 'service'
+              ? profiles.data.filter(
+                  (p) => p.role !== 'admin' && p.id !== editing.id,
+                )
+              : null
+          }
+          onReplaceService={
+            isAdmin && editing.role === 'service'
+              ? async (newId) => {
+                  await replaceService(editing, newId)
                   setEditing(null)
                 }
               : undefined

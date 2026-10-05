@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Repeat } from 'lucide-react'
 import Modal from '../shared/Modal'
 import Field, { inputCls } from '../shared/Field'
 import SkillsPicker from '../activities/SkillsPicker'
@@ -21,6 +21,8 @@ export default function EditProfileModal({
   onClose,
   onSave,
   onDelete,
+  onReplaceService,
+  replaceCandidates,
 }) {
   const [name, setName] = useState(person.name || '')
   const [phone, setPhone] = useState(person.phone || '')
@@ -31,6 +33,24 @@ export default function EditProfileModal({
   const [error, setError] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showReplace, setShowReplace] = useState(false)
+  const [newServiceId, setNewServiceId] = useState('')
+  const [replacing, setReplacing] = useState(false)
+
+  const handleReplace = async () => {
+    if (!newServiceId) {
+      setError('יש לבחור את בת השירות החדשה')
+      return
+    }
+    setReplacing(true)
+    setError(null)
+    try {
+      await onReplaceService(newServiceId)
+    } catch (e) {
+      setError(e.message || 'שגיאה בהחלפה')
+      setReplacing(false)
+    }
+  }
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -152,6 +172,62 @@ export default function EditProfileModal({
       >
         {busy ? 'שומר…' : 'שמירה'}
       </button>
+
+      {onReplaceService && replaceCandidates && (
+        <div className="mt-4 pt-4 border-t border-stone-100">
+          {!showReplace ? (
+            <button
+              type="button"
+              onClick={() => setShowReplace(true)}
+              disabled={busy || deleting}
+              className="w-full flex items-center justify-center gap-1.5 text-sm text-sky-700 hover:text-sky-800 hover:bg-sky-50 py-2 rounded-xl font-semibold disabled:opacity-50"
+            >
+              <Repeat size={15} /> החלפת בת שירות
+            </button>
+          ) : (
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
+              <p className="text-sm text-sky-900 font-semibold mb-1">
+                החלפת "{person.name}" בבת שירות אחרת
+              </p>
+              <p className="text-xs text-sky-700 mb-2">
+                בחר/י משתמש/ת קיים/ה — היא תהפוך לבת שירות באותו סניף, המשפחות
+                של {person.name} יועברו אליה, ו{person.name} תימחק.
+              </p>
+              <select
+                className={`${inputCls} mb-2`}
+                value={newServiceId}
+                onChange={(e) => setNewServiceId(e.target.value)}
+              >
+                <option value="">— בחר/י בת שירות חדשה —</option>
+                {replaceCandidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.branch?.name ? ` · ${c.branch.name}` : ''}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleReplace}
+                  disabled={replacing}
+                  className="flex-1 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white py-2 rounded-xl font-semibold text-sm"
+                >
+                  {replacing ? 'מחליף…' : 'בצע/י החלפה'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReplace(false)}
+                  disabled={replacing}
+                  className="flex-1 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 py-2 rounded-xl font-semibold text-sm"
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {onDelete && !isSelf && (
         <div className="mt-4 pt-4 border-t border-stone-100">
