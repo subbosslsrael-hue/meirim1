@@ -329,11 +329,16 @@ export default function Dashboard({ onNavigate }) {
           <>
             <Stat
               icon={CalendarHeart}
-              label="פעילויות שנרשמתי"
+              label="פעילויות באחריותי"
               value={mySignups}
               tone="green"
             />
-            <Stat icon={Truck} label="יעדים שלקחתי" value={myStops} tone="amber" />
+            <Stat
+              icon={Truck}
+              label="יעדי חלוקה באחריותי"
+              value={myStops}
+              tone="amber"
+            />
           </>
         )}
       </div>
