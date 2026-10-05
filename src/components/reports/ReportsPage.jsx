@@ -112,6 +112,46 @@ export default function ReportsPage() {
     return Object.entries(m).sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [reports.data])
 
+  // טבלת שעות צולבת: שורה לכל שבוע, עמודה לכל מדווח (בת שירות/מדריך),
+  // ובתא — סך השעות שדיווח אותו אדם באותו שבוע.
+  const matrix = useMemo(() => {
+    const reporters = profiles
+      .filter((p) => p.role === 'service' || p.role === 'instructor')
+      .sort((a, b) =>
+        a.role === b.role
+          ? (a.name || '').localeCompare(b.name || '', 'he')
+          : a.role === 'service'
+            ? -1
+            : 1,
+      )
+    const weeks = [...new Set(reports.data.map((r) => r.week))].sort((a, b) =>
+      a < b ? 1 : -1,
+    )
+    const cell = {}
+    const colTotal = {}
+    let grand = 0
+    reports.data.forEach((r) => {
+      const h = Number(r.hours || 0)
+      cell[`${r.profile_id}|${r.week}`] =
+        (cell[`${r.profile_id}|${r.week}`] || 0) + h
+      colTotal[r.profile_id] = (colTotal[r.profile_id] || 0) + h
+      grand += h
+    })
+    const rowTotal = {}
+    weeks.forEach((w) => {
+      rowTotal[w] = reporters.reduce(
+        (s, p) => s + (cell[`${p.id}|${w}`] || 0),
+        0,
+      )
+    })
+    return { reporters, weeks, cell, colTotal, rowTotal, grand }
+  }, [reports.data, profiles])
+
+  const fmtWeek = (w) => {
+    const m = /^(\d{4})-W(\d{2})$/.exec(w || '')
+    return m ? `שבוע ${Number(m[2])} · ${m[1]}` : w
+  }
+
   const byProfile = useMemo(() => {
     const m = {}
     reports.data.forEach(
@@ -445,22 +485,82 @@ export default function ReportsPage() {
 
       <ComplianceTracker reports={reports.data} profiles={profiles} />
 
-      {weeklyTotals.length > 0 && (
+      {matrix.weeks.length > 0 && matrix.reporters.length > 0 && (
         <Card className="p-4">
           <h4 className="font-bold text-stone-800 text-sm mb-3">
-            סיכום שעות שבועי
+            שעות לפי שבוע ומדווח/ת
           </h4>
-          <div className="space-y-1.5">
-            {weeklyTotals.map(([week, total]) => (
-              <div
-                key={week}
-                className="flex items-center justify-between text-sm border-b border-stone-50 pb-1.5 last:border-0 last:pb-0"
-              >
-                <span className="text-stone-600">{week}</span>
-                <span className="font-bold text-emerald-700">{total} שעות</span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="text-sm border-collapse min-w-full">
+              <thead>
+                <tr className="text-xs text-stone-500">
+                  <th className="sticky right-0 bg-white text-right font-semibold px-3 py-2 border-b border-stone-200 whitespace-nowrap">
+                    שבוע
+                  </th>
+                  {matrix.reporters.map((p) => (
+                    <th
+                      key={p.id}
+                      className="font-semibold px-3 py-2 border-b border-stone-200 text-center whitespace-nowrap"
+                    >
+                      <div className="text-stone-700">{p.name}</div>
+                      <div className="text-[10px] font-normal text-stone-400">
+                        {p.role === 'service' ? 'בת שירות' : 'מדריך/ה'}
+                      </div>
+                    </th>
+                  ))}
+                  <th className="font-semibold px-3 py-2 border-b border-stone-200 text-center whitespace-nowrap bg-emerald-50 text-emerald-700">
+                    סה״כ
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.weeks.map((w) => (
+                  <tr key={w} className="border-b border-stone-50">
+                    <td className="sticky right-0 bg-white text-right font-medium text-stone-600 px-3 py-2 whitespace-nowrap">
+                      {fmtWeek(w)}
+                    </td>
+                    {matrix.reporters.map((p) => {
+                      const h = matrix.cell[`${p.id}|${w}`]
+                      return (
+                        <td
+                          key={p.id}
+                          className={`px-3 py-2 text-center ${
+                            h
+                              ? 'font-semibold text-stone-800'
+                              : 'text-stone-300'
+                          }`}
+                        >
+                          {h ? h : '—'}
+                        </td>
+                      )
+                    })}
+                    <td className="px-3 py-2 text-center font-bold text-emerald-700 bg-emerald-50/50">
+                      {matrix.rowTotal[w] || 0}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-stone-200 bg-stone-50/60">
+                  <td className="sticky right-0 bg-stone-50 text-right font-bold text-stone-700 px-3 py-2 whitespace-nowrap">
+                    סה״כ
+                  </td>
+                  {matrix.reporters.map((p) => (
+                    <td
+                      key={p.id}
+                      className="px-3 py-2 text-center font-bold text-stone-700"
+                    >
+                      {matrix.colTotal[p.id] || 0}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 text-center font-extrabold text-emerald-700 bg-emerald-100">
+                    {matrix.grand}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+          <p className="text-[11px] text-stone-400 mt-2">
+            המספר בכל תא הוא סך השעות שאותו אדם דיווח באותו שבוע. "—" = לא דווח.
+          </p>
         </Card>
       )}
 
