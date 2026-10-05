@@ -260,13 +260,13 @@ export default function Dashboard({ onNavigate }) {
           <>
             <Stat
               icon={Activity}
-              label="פעילויות פעילות"
+              label="פעילויות בביצוע"
               value={activities.length}
               tone="green"
             />
             <Stat
               icon={CalendarHeart}
-              label="פעילויות קרובות שלי"
+              label="פעילויות בתכנון שלי"
               value={myUpcoming.length}
               tone="amber"
             />
