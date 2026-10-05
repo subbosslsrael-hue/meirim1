@@ -100,6 +100,12 @@ export default function ActivityForm({
       setError('לא ניתן לקבוע פעילות לתאריך שעבר')
       return
     }
+    // מיומנויות נדרשות = הקטגוריה של הפעילות (לדוחות). חובה לפחות אחת,
+    // כדי שלא תהיה פעילות "ללא קטגוריה".
+    if (!form.required_skills.trim()) {
+      setError('יש לבחור לפחות מיומנות נדרשת אחת (קטגוריית הפעילות)')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -198,7 +204,7 @@ export default function ActivityForm({
           </select>
         )}
       </Field>
-      <Field label="מיומנויות נדרשות">
+      <Field label="מיומנויות נדרשות (קטגוריית הפעילות — חובה)">
         <SkillsPicker
           value={form.required_skills}
           onChange={(v) => setForm((f) => ({ ...f, required_skills: v }))}
