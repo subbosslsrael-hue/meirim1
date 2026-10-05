@@ -6,6 +6,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Folder,
+  FolderOpen,
+  ChevronDown,
 } from 'lucide-react'
 import FamilyCard from './FamilyCard'
 import FamilyForm from './FamilyForm'
@@ -29,6 +32,11 @@ export default function FamiliesPage() {
   const [openSwap, setOpenSwap] = useState(false)
   const [editFamily, setEditFamily] = useState(null)
   const [toast, setToast] = useState(null)
+  const [openBranches, setOpenBranches] = useState({})
+
+  const isAdmin = profile?.role === 'admin'
+  const toggleBranch = (id) =>
+    setOpenBranches((s) => ({ ...s, [id]: !s[id] }))
 
   if (families.loading) return <LoadingScreen message="טוען משפחות…" />
 
@@ -36,6 +44,22 @@ export default function FamiliesPage() {
   const filtered = families.data.filter((f) =>
     [f.name, f.city, f.address, f.need_category].join(' ').includes(q),
   )
+
+  // קיבוץ לתיקיות לפי סניף (למנכ"ל). סדר לפי שם הסניף; "ללא סניף" בסוף.
+  const branchGroups = branches
+    .map((b) => ({
+      id: b.id,
+      name: b.name,
+      items: filtered.filter((f) => f.branch_id === b.id),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'he'))
+  const noBranch = filtered.filter(
+    (f) => !branches.some((b) => b.id === f.branch_id),
+  )
+  if (noBranch.length)
+    branchGroups.push({ id: '__none__', name: 'ללא סניף', items: noBranch })
+  // בזמן חיפוש — פותחים אוטומטית כל תיקייה שיש בה תוצאות.
+  const searching = q.trim().length > 0
 
   const assignToMe = async (familyId) => {
     try {
@@ -160,22 +184,79 @@ export default function FamiliesPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filtered.map((f) => (
-          <FamilyCard
-            key={f.id}
-            family={f}
-            currentProfile={profile}
-            onAssignToMe={assignToMe}
-            onEdit={setEditFamily}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-stone-400 text-sm col-span-full text-center py-8">
-            לא נמצאו משפחות.
-          </p>
-        )}
-      </div>
+      {isAdmin ? (
+        // תצוגת תיקיות לפי סניף (מנכ"ל)
+        <div className="space-y-2">
+          {branchGroups.map((g) => {
+            if (!g.items.length) return null
+            const open = searching || openBranches[g.id]
+            return (
+              <div
+                key={g.id}
+                className="border border-stone-200 rounded-xl overflow-hidden bg-white"
+              >
+                <button
+                  onClick={() => toggleBranch(g.id)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-right hover:bg-stone-50"
+                >
+                  {open ? (
+                    <FolderOpen size={18} className="text-amber-600 shrink-0" />
+                  ) : (
+                    <Folder size={18} className="text-amber-600 shrink-0" />
+                  )}
+                  <span className="font-bold text-stone-800 flex-1">
+                    {g.name}
+                  </span>
+                  <span className="text-xs text-stone-500 bg-stone-100 rounded-full px-2 py-0.5">
+                    {g.items.length}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-stone-400 transition-transform ${
+                      open ? '' : '-rotate-90'
+                    }`}
+                  />
+                </button>
+                {open && (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 p-3 pt-0 border-t border-stone-100">
+                    {g.items.map((f) => (
+                      <FamilyCard
+                        key={f.id}
+                        family={f}
+                        currentProfile={profile}
+                        onAssignToMe={assignToMe}
+                        onEdit={setEditFamily}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {filtered.length === 0 && (
+            <p className="text-stone-400 text-sm text-center py-8">
+              לא נמצאו משפחות.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.map((f) => (
+            <FamilyCard
+              key={f.id}
+              family={f}
+              currentProfile={profile}
+              onAssignToMe={assignToMe}
+              onEdit={setEditFamily}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-stone-400 text-sm col-span-full text-center py-8">
+              לא נמצאו משפחות.
+            </p>
+          )}
+        </div>
+      )}
 
       {openAdd && (
         <FamilyForm
