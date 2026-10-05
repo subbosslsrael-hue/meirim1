@@ -72,6 +72,8 @@ export default function ReportsPage() {
   const [editingDebrief, setEditingDebrief] = useState(null)
   const [confirmDelArchive, setConfirmDelArchive] = useState(null)
   const [busyDelArchive, setBusyDelArchive] = useState(false)
+  // תא שנבחר במטריצה (אדם×שבוע) לצפייה בפירוט השעות לפי פעילות.
+  const [detailCell, setDetailCell] = useState(null)
 
   const deleteArchive = async (id) => {
     setBusyDelArchive(true)
@@ -522,15 +524,25 @@ export default function ReportsPage() {
                     {matrix.reporters.map((p) => {
                       const h = matrix.cell[`${p.id}|${w}`]
                       return (
-                        <td
-                          key={p.id}
-                          className={`px-3 py-2 text-center ${
-                            h
-                              ? 'font-semibold text-stone-800'
-                              : 'text-stone-300'
-                          }`}
-                        >
-                          {h ? h : '—'}
+                        <td key={p.id} className="px-1 py-1 text-center">
+                          {h ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDetailCell({
+                                  profileId: p.id,
+                                  week: w,
+                                  name: p.name,
+                                })
+                              }
+                              className="w-full px-2 py-1 rounded-lg font-semibold text-stone-800 hover:bg-amber-50 hover:text-amber-700"
+                              title="הצגת פירוט שעות"
+                            >
+                              {h}
+                            </button>
+                          ) : (
+                            <span className="text-stone-300">—</span>
+                          )}
                         </td>
                       )
                     })}
@@ -559,7 +571,8 @@ export default function ReportsPage() {
             </table>
           </div>
           <p className="text-[11px] text-stone-400 mt-2">
-            המספר בכל תא הוא סך השעות שאותו אדם דיווח באותו שבוע. "—" = לא דווח.
+            המספר בכל תא הוא סך השעות שאותו אדם דיווח באותו שבוע — לחיצה עליו
+            מציגה פירוט לפי פעילות. "—" = לא דווח.
           </p>
         </Card>
       )}
@@ -584,56 +597,53 @@ export default function ReportsPage() {
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-stone-50 text-stone-500 text-xs">
-            <tr>
-              <th className="text-right font-semibold px-4 py-2.5">מדווח/ת</th>
-              <th className="text-right font-semibold px-4 py-2.5">שבוע</th>
-              <th className="text-right font-semibold px-4 py-2.5">פעילות</th>
-              <th className="text-right font-semibold px-4 py-2.5">פרויקט</th>
-              <th className="text-right font-semibold px-4 py-2.5">שעות</th>
-              <th className="text-right font-semibold px-4 py-2.5 hidden md:table-cell">
-                הערות
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.data.map((r) => (
-              <tr key={r.id} className="border-t border-stone-100">
-                <td className="px-4 py-2.5 font-medium text-stone-700">
-                  {r.profile?.name || '—'}
-                </td>
-                <td className="px-4 py-2.5 text-stone-500">{r.week}</td>
-                <td className="px-4 py-2.5 text-stone-700">
-                  {r.activity_name || '—'}
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                    {r.project}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 font-bold text-stone-800">
-                  {r.hours}
-                </td>
-                <td className="px-4 py-2.5 text-stone-500 hidden md:table-cell">
-                  {r.note || '—'}
-                </td>
-              </tr>
-            ))}
-            {reports.data.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="text-center text-stone-400 text-sm py-6"
+      {detailCell && (
+        <Modal
+          title={`פירוט שעות — ${detailCell.name}`}
+          onClose={() => setDetailCell(null)}
+        >
+          <p className="text-sm text-stone-500 mb-3">{fmtWeek(detailCell.week)}</p>
+          <div className="space-y-2">
+            {reports.data
+              .filter(
+                (r) =>
+                  r.profile_id === detailCell.profileId &&
+                  r.week === detailCell.week,
+              )
+              .map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-start gap-2 border border-stone-100 rounded-xl p-2.5 bg-stone-50/50"
                 >
-                  אין דיווחים עדיין.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-stone-800 text-sm">
+                      {r.activity_name || 'כללי (ללא פעילות מסוימת)'}
+                    </div>
+                    <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                      {r.project}
+                    </span>
+                    {r.note && (
+                      <div className="text-xs text-stone-500 mt-1 whitespace-pre-wrap">
+                        {r.note}
+                      </div>
+                    )}
+                  </div>
+                  <div className="font-bold text-stone-800 shrink-0">
+                    {r.hours} ש׳
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div className="mt-3 flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            <span className="text-sm font-semibold text-stone-700">
+              סה״כ לשבוע
+            </span>
+            <span className="text-lg font-extrabold text-emerald-700">
+              {matrix.cell[`${detailCell.profileId}|${detailCell.week}`] || 0} ש׳
+            </span>
+          </div>
+        </Modal>
+      )}
 
       {editingDebrief && (
         <EditDebriefModal
