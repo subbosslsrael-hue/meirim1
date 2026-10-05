@@ -41,11 +41,13 @@ export default function Sidebar({ tabs, activeTab, onTab, badges = {} }) {
           )
         })}
       </nav>
+      {/* הוסתר זמנית לבקשת העמותה — להחזרה בעתיד:
       <div className="p-4 text-[11px] text-stone-400 border-t border-stone-100">
         עמותת מאירים · ע״ר 580644342
         <br />
         מערכת ניהול · גרסה 1.0
       </div>
+      */}
     </aside>
   )
 }
