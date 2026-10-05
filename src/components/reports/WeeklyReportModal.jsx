@@ -18,6 +18,7 @@ export default function WeeklyReportModal({
   const [reportedWeeks, setReportedWeeks] = useState([])
   const [items, setItems] = useState([{ activity_id: '', hours: '' }])
   const [note, setNote] = useState('')
+  const [noActivities, setNoActivities] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -64,6 +65,28 @@ export default function WeeklyReportModal({
       setError(we)
       return
     }
+    // "לא היו לי פעילויות השבוע" — דיווח ריק, רק בחירת שבוע (ללא שעות).
+    if (noActivities) {
+      setBusy(true)
+      setError(null)
+      try {
+        await insertRows([
+          {
+            profile_id: profile.id,
+            week,
+            activity_id: null,
+            activity_name: null,
+            project: GENERAL_PROJECT,
+            hours: 0,
+            note: note || 'אין פעילות לדווח השבוע',
+          },
+        ])
+      } catch (e) {
+        setError(e.message || 'שגיאה בשמירה')
+        setBusy(false)
+      }
+      return
+    }
     const valid = items.filter((it) => Number(it.hours) > 0)
     if (!valid.length) {
       setError('יש להזין לפחות שורה אחת עם מספר שעות גדול מ-0')
@@ -86,32 +109,6 @@ export default function WeeklyReportModal({
           }
         }),
       )
-    } catch (e) {
-      setError(e.message || 'שגיאה בשמירה')
-      setBusy(false)
-    }
-  }
-
-  const submitEmpty = async () => {
-    const we = weekError()
-    if (we) {
-      setError(we)
-      return
-    }
-    setBusy(true)
-    setError(null)
-    try {
-      await insertRows([
-        {
-          profile_id: profile.id,
-          week,
-          activity_id: null,
-          activity_name: null,
-          project: GENERAL_PROJECT,
-          hours: 0,
-          note: note || 'אין פעילות לדווח השבוע',
-        },
-      ])
     } catch (e) {
       setError(e.message || 'שגיאה בשמירה')
       setBusy(false)
@@ -154,6 +151,20 @@ export default function WeeklyReportModal({
           reportedWeeks={reportedWeeks}
         />
 
+        <label className="flex items-center gap-2 mb-3 cursor-pointer select-none bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={noActivities}
+            onChange={(e) => setNoActivities(e.target.checked)}
+            className="w-4 h-4 accent-amber-500"
+          />
+          <span className="text-sm font-semibold text-stone-700">
+            לא היו לי פעילויות לדווח השבוע
+          </span>
+        </label>
+
+        {!noActivities && (
+          <>
         <div className="text-sm font-semibold text-stone-600 mb-1.5">
           שעות לפי פעילות
         </div>
@@ -207,6 +218,8 @@ export default function WeeklyReportModal({
           </span>
           <span className="text-lg font-extrabold text-emerald-700">{total}</span>
         </div>
+          </>
+        )}
 
         <Field label="הערה (אופציונלי)">
           <textarea
@@ -230,16 +243,6 @@ export default function WeeklyReportModal({
         >
           {busy ? 'שומר…' : 'שמירת דיווח'}
         </button>
-
-        {blocking && (
-          <button
-            onClick={submitEmpty}
-            disabled={busy}
-            className="w-full mt-2 text-sm text-stone-500 hover:text-stone-700 disabled:opacity-50"
-          >
-            לא היו לי פעילויות לדווח השבוע
-          </button>
-        )}
       </div>
     </div>
   )
