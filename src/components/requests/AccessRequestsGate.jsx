@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import RequestCard from './RequestCard'
-import { pendingRequests } from '../../hooks/useAccessRequests'
+import { pendingForViewer } from '../../hooks/useAccessRequests'
 
-// חלון שקופץ למנכ"ל בכניסה למערכת כשיש בקשות כניסה ממתינות.
-// ניתן לאשר/לדחות ישירות מכאן, או לסגור ולטפל מאוחר יותר בטאב "בקשות כניסה".
-export default function AccessRequestsGate({ requests }) {
+// חלון שקופץ בכניסה למערכת כשיש בקשות כניסה ממתינות לאישור הצופה.
+// מנכ"ל — בנות שירות; בת שירות — מדריכים/מתנדבים בסניף שלה.
+export default function AccessRequestsGate({ requests, viewer }) {
   const [dismissed, setDismissed] = useState(false)
 
-  const pending = pendingRequests(requests.data)
+  const pending = pendingForViewer(requests.data, viewer)
   if (dismissed || pending.length === 0) return null
 
   const approve = (id) => requests.update(id, { approved: true })

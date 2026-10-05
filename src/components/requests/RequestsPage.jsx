@@ -3,13 +3,14 @@ import { UserPlus, CheckCircle2 } from 'lucide-react'
 import Card from '../shared/Card'
 import LoadingScreen from '../shared/LoadingScreen'
 import RequestCard from './RequestCard'
-import { pendingRequests } from '../../hooks/useAccessRequests'
+import { pendingForViewer } from '../../hooks/useAccessRequests'
 
-// טאב "בקשות כניסה" למנכ"ל — רשימת הנרשמים הממתינים לאישור.
-export default function RequestsPage({ requests }) {
+// טאב "בקשות כניסה": מנכ"ל מאשר בנות שירות; בת שירות מאשרת
+// מדריכים/מתנדבים בסניף שלה.
+export default function RequestsPage({ requests, viewer }) {
   if (requests.loading) return <LoadingScreen message="טוען בקשות…" />
 
-  const pending = pendingRequests(requests.data)
+  const pending = pendingForViewer(requests.data, viewer)
   const approve = (id) => requests.update(id, { approved: true })
   const reject = (id) => requests.remove(id)
 
@@ -21,7 +22,9 @@ export default function RequestsPage({ requests }) {
           בקשות כניסה
         </h2>
         <p className="text-sm text-stone-500">
-          נרשמים חדשים שממתינים לאישורך כדי להיכנס למערכת.
+          {viewer?.role === 'admin'
+            ? 'בנות שירות חדשות שממתינות לאישורך כדי להיכנס למערכת.'
+            : 'מדריכים ומתנדבים חדשים בסניף שלך שממתינים לאישורך.'}
         </p>
       </div>
 

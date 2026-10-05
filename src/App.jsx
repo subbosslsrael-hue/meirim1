@@ -33,7 +33,7 @@ import AccessRequestsGate from './components/requests/AccessRequestsGate'
 import PendingDebriefGate from './components/activities/PendingDebriefGate'
 import WeeklyReportGate from './components/reports/WeeklyReportGate'
 import { useChatUnread } from './hooks/useChatUnread'
-import { useAccessRequests, pendingRequests } from './hooks/useAccessRequests'
+import { useAccessRequests, pendingForViewer } from './hooks/useAccessRequests'
 
 const ALL_TABS = [
   { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
@@ -51,10 +51,10 @@ const ALL_TABS = [
 const TABS_BY_ROLE = {
   // "המיומנויות שלי" מיועד למדריכים בלבד — לא למנכ"ל.
   admin: ALL_TABS.map((t) => t.id).filter((id) => id !== 'myskills'),
-  // בת שירות רואה הכל מלבד "אפיון ותיעוד", "בקשות כניסה" (למנכ"ל בלבד)
-  // ו"המיומנויות שלי" (למדריכים בלבד).
+  // בת שירות רואה הכל מלבד "אפיון ותיעוד" ו"המיומנויות שלי" (למדריכים).
+  // "בקשות כניסה" כן מוצג לה — לאישור מדריכים/מתנדבים בסניף שלה.
   service: ALL_TABS.map((t) => t.id).filter(
-    (id) => id !== 'docs' && id !== 'requests' && id !== 'myskills',
+    (id) => id !== 'docs' && id !== 'myskills',
   ),
   instructor: [
     'dashboard',
@@ -77,13 +77,15 @@ function AppShell() {
   const [tab, setTab] = useState('dashboard')
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const isService = profile?.role === 'service'
+  const canReview = isAdmin || isService
   const {
     counts: chatCounts,
     total: chatUnread,
     refresh: refreshChat,
   } = useChatUnread()
-  const accessRequests = useAccessRequests({ enabled: isAdmin })
-  const pendingCount = pendingRequests(accessRequests.data).length
+  const accessRequests = useAccessRequests({ enabled: canReview })
+  const pendingCount = pendingForViewer(accessRequests.data, profile).length
   const badges = { chat: chatUnread, requests: pendingCount }
 
   const visibleTabs = useMemo(() => {
@@ -130,8 +132,8 @@ function AppShell() {
             <ChatPage chatCounts={chatCounts} onRead={refreshChat} />
           )}
           {tab === 'team' && <TeamPage />}
-          {tab === 'requests' && isAdmin && (
-            <RequestsPage requests={accessRequests} />
+          {tab === 'requests' && canReview && (
+            <RequestsPage requests={accessRequests} viewer={profile} />
           )}
           {tab === 'reports' && <ReportsPage />}
           {tab === 'myskills' && <MySkillsPage />}
@@ -142,7 +144,9 @@ function AppShell() {
         <PendingDebriefGate />
       )}
       {['service', 'instructor'].includes(profile?.role) && <WeeklyReportGate />}
-      {isAdmin && <AccessRequestsGate requests={accessRequests} />}
+      {canReview && (
+        <AccessRequestsGate requests={accessRequests} viewer={profile} />
+      )}
     </div>
   )
 }

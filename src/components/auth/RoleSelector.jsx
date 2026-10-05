@@ -43,7 +43,7 @@ const ROLE_OPTIONS = [
     desc: 'הובלת פעילויות לפי תחום מיומנות',
     icon: Briefcase,
     color: 'sky',
-    needsBranch: false,
+    needsBranch: true,
   },
 ]
 
