@@ -15,6 +15,7 @@ import {
   MapPin,
   Megaphone,
   UserCheck,
+  Phone,
 } from 'lucide-react'
 import {
   BarChart,
@@ -67,7 +68,8 @@ export default function Dashboard({ onNavigate }) {
   const { data: activities } = useActivities()
   const { data: reports } = useReports({ enabled: isAdmin })
   const { data: distributions } = useDistributions()
-  const { data: profiles } = useProfiles({ enabled: manager })
+  // נטען לכולם: מתנדב/מדריך רואים (דרך RLS) את עצמם ואת בת/בנות השירות של סניפם.
+  const { data: profiles } = useProfiles()
 
   const [unreadChats, setUnreadChats] = useState(0)
   const [announceUnread, setAnnounceUnread] = useState(0)
@@ -157,6 +159,13 @@ export default function Dashboard({ onNavigate }) {
       cls: 'bg-orange-100 text-orange-600',
     })
 
+  // ── הסניף שלי (למתנדב/מדריך) ─────────────────────────────────────
+  const myBranchName = profile?.branch?.name
+  const myServiceWorkers = profiles.filter(
+    (p) => p.role === 'service' && p.branch_id === profile?.branch_id,
+  )
+  const showMyBranch = role === 'volunteer' || role === 'instructor'
+
   // ── סטטיסטיקות לפי תפקיד ─────────────────────────────────────────
   const volunteerCount = profiles.filter((p) => p.role === 'volunteer').length
   const instructorCount = profiles.filter((p) => p.role === 'instructor').length
@@ -235,6 +244,50 @@ export default function Dashboard({ onNavigate }) {
           </div>
         )}
       </Card>
+
+      {/* הסניף שלי — למתנדב/מדריך */}
+      {showMyBranch && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin size={18} className="text-amber-600" />
+            <h3 className="font-bold text-stone-800 text-sm">הסניף שלי</h3>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-stone-700 mb-3">
+            <span className="text-stone-500">סניף:</span>
+            <span className="font-semibold">{myBranchName || '—'}</span>
+          </div>
+          <div className="text-xs font-semibold text-stone-500 mb-1.5">
+            {myServiceWorkers.length > 1 ? 'בנות השירות שלי' : 'בת השירות שלי'}
+          </div>
+          {myServiceWorkers.length === 0 ? (
+            <p className="text-sm text-stone-400">
+              אין בת שירות משויכת לסניף זה עדיין.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {myServiceWorkers.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2"
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                    <UserCheck size={14} className="text-amber-500" />
+                    {s.name}
+                  </span>
+                  {s.phone && (
+                    <a
+                      href={`tel:${s.phone}`}
+                      className="flex items-center gap-1 text-sm text-emerald-700 font-semibold hover:underline"
+                    >
+                      <Phone size={13} /> {s.phone}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* סטטיסטיקות */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

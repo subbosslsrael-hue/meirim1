@@ -310,6 +310,14 @@ CREATE POLICY "profiles update self"
 CREATE POLICY "profiles insert by admin or self"
   ON profiles FOR INSERT TO authenticated
   WITH CHECK (id = auth.uid() OR current_user_role() = 'admin');
+-- מתנדב/מדריך רשאי לראות את בת/בנות השירות של הסניף שלו (לתצוגת "הסניף שלי").
+CREATE POLICY "profiles read branch service"
+  ON profiles FOR SELECT TO authenticated
+  USING (
+    (current_user_role() = 'volunteer' OR current_user_role() = 'instructor')
+    AND role = 'service'
+    AND branch_id = current_user_branch()
+  );
 -- מחיקת משתמשים: מנכ"ל מוחק כל מי שאינו מנכ"ל; בת שירות מוחקת
 -- מדריכים/מתנדבים בסניף שלה בלבד.
 CREATE POLICY "profiles delete"
