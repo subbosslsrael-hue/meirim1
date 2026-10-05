@@ -39,6 +39,8 @@ import { useActivityArchives } from '../../hooks/useActivityArchives'
 import { getDoorPhotoUrl, getActivityFileUrl } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import WeekPicker from './WeekPicker'
+import RangeReports from './RangeReports'
+import { formatWeekRange } from '../../lib/week'
 
 function currentWeek() {
   const d = new Date()
@@ -150,8 +152,11 @@ export default function ReportsPage() {
   }, [reports.data, profiles])
 
   const fmtWeek = (w) => {
-    const m = /^(\d{4})-W(\d{2})$/.exec(w || '')
-    return m ? `שבוע ${Number(m[2])} · ${m[1]}` : w
+    try {
+      return w ? formatWeekRange(w) : w
+    } catch {
+      return w
+    }
   }
 
   const byProfile = useMemo(() => {
@@ -486,6 +491,15 @@ export default function ReportsPage() {
       )}
 
       <ComplianceTracker reports={reports.data} profiles={profiles} />
+
+      {canViewArchives && (
+        <RangeReports
+          reports={reports.data}
+          profiles={profiles}
+          activities={activities}
+          actArchives={actArchives}
+        />
+      )}
 
       {matrix.weeks.length > 0 && matrix.reporters.length > 0 && (
         <Card className="p-4">

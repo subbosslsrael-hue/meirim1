@@ -540,6 +540,7 @@ CREATE TABLE IF NOT EXISTS activity_archives (
   what_needs_improvement TEXT,
   rating INT CHECK (rating >= 0 AND rating <= 5),
   files JSONB DEFAULT '[]'::jsonb,            -- מערך [{path, name}] של קבצים מצורפים
+  required_skills TEXT,                        -- מיומנויות/קטגוריות (לדוחות לפי קטגוריה)
   archived_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_activity_archives_branch
@@ -649,11 +650,11 @@ BEGIN
   INSERT INTO activity_archives(
     name, project, branch_id, activity_date, activity_time, location,
     participants, signed_count, what_was_good, what_needs_improvement,
-    rating, files
+    rating, files, required_skills
   ) VALUES (
     a.name, a.project, a.branch_id, a.activity_date, a.activity_time, a.location,
     a.participants, n_signed, p_good, p_improve,
-    p_rating, COALESCE(p_files, '[]'::jsonb)
+    p_rating, COALESCE(p_files, '[]'::jsonb), a.required_skills
   );
 
   DELETE FROM activities WHERE id = p_activity_id;
