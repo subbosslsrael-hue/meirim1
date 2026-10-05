@@ -6,6 +6,13 @@ import { supabase } from '../../lib/supabase'
 import { CATEGORIES } from '../../lib/constants'
 import AddressAutocomplete from './AddressAutocomplete'
 import { searchAddresses, searchCities } from '../../lib/geocode'
+
+// מפריד כתובת מלאה ל{רחוב, מספר בית} — המספר הוא מספר (אופציונלי עם אות) בסוף.
+const splitAddress = (full) => {
+  const s = (full || '').trim()
+  const m = s.match(/^(.*?)[\s,]+(\d+[א-תA-Za-z]?)$/)
+  return m ? { street: m[1].trim(), house: m[2] } : { street: s, house: '' }
+}
 import {
   normalizePhone,
   isValidIsraeliPhone,
@@ -24,11 +31,13 @@ export default function FamilyForm({
   existingFamilies = [],
 }) {
   const isEdit = !!family
+  const initAddr = splitAddress(family?.address)
   const [form, setForm] = useState({
     name: family?.name || '',
     branch_id: family?.branch_id || defaultBranchId || branches[0]?.id || '',
     city: family?.city || '',
-    address: family?.address || '',
+    address: initAddr.street, // שם הרחוב בלבד (בלי מספר בית)
+    house: initAddr.house, // מספר בית, שדה נפרד
     phone: family?.phone || '',
     need_category: family?.need_category || CATEGORIES[0],
     responsible_profile_id:
@@ -74,6 +83,10 @@ export default function FamilyForm({
     }
     if (!pickedCoords) {
       setError('יש לבחור כתובת מתוך רשימת ההשלמה (הקלד/י ובחר/י כתובת מהרשימה)')
+      return
+    }
+    if (!String(form.house).trim()) {
+      setError('יש להזין מספר בית')
       return
     }
     if (!form.phone.trim()) {
@@ -135,8 +148,15 @@ export default function FamilyForm({
       // אין צורך בגאוקוד נוסף, והמיקום מובטח.
       const lat = pickedCoords.lat
       const lng = pickedCoords.lng
+      // איחוד שם הרחוב + מספר הבית לכתובת מלאה (house הוא שדה-טופס בלבד,
+      // לא עמודה בטבלה — לכן מוציאים אותו מה-payload).
+      const { house, ...rest } = form
+      const fullAddress = [form.address.trim(), String(house).trim()]
+        .filter(Boolean)
+        .join(' ')
       await onSave({
-        ...form,
+        ...rest,
+        address: fullAddress,
         city,
         phone: normalizePhone(form.phone),
         lat,
@@ -204,32 +224,46 @@ export default function FamilyForm({
           />
         </Field>
       </div>
-      <Field label="כתובת (בחירה מרשימת כתובות אמיתיות)">
-        <AddressAutocomplete
-          value={form.address}
-          picked={!!pickedCoords}
-          fetcher={addressFetcher}
-          onType={(v) => {
-            // הקלדה ידנית מבטלת בחירה קודמת — חובה לבחור שוב מהרשימה.
-            setForm((f) => ({ ...f, address: v }))
-            setPickedCoords(null)
-          }}
-          onPick={(r) => {
-            setForm((f) => ({
-              ...f,
-              address: r.street || r.label,
-              city: r.city || f.city,
-            }))
-            setPickedCoords({ lat: r.lat, lng: r.lng })
-            if (r.city) setCityPicked(true)
-          }}
-          placeholder={
-            scopeCity
-              ? `רחוב ומספר ב${scopeCity} — בחר/י מהרשימה`
-              : 'הקלד/י עיר + רחוב + מספר, ובחר/י מהרשימה'
-          }
-        />
-      </Field>
+      <div className="grid grid-cols-[1fr_5rem] gap-3">
+        <Field label="רחוב (בחירה מרשימת כתובות אמיתיות)">
+          <AddressAutocomplete
+            value={form.address}
+            picked={!!pickedCoords}
+            fetcher={addressFetcher}
+            onType={(v) => {
+              // הקלדה ידנית מבטלת בחירה קודמת — חובה לבחור שוב מהרשימה.
+              setForm((f) => ({ ...f, address: v }))
+              setPickedCoords(null)
+            }}
+            onPick={(r) => {
+              // מפרידים מספר בית שהגיע בטעות עם שם הרחוב לשדה הנפרד.
+              const picked = splitAddress(r.street || r.label)
+              setForm((f) => ({
+                ...f,
+                address: picked.street,
+                house: picked.house || f.house,
+                city: r.city || f.city,
+              }))
+              setPickedCoords({ lat: r.lat, lng: r.lng })
+              if (r.city) setCityPicked(true)
+            }}
+            placeholder={
+              scopeCity
+                ? `שם רחוב ב${scopeCity} — בחר/י מהרשימה`
+                : 'הקלד/י עיר + רחוב, ובחר/י מהרשימה'
+            }
+          />
+        </Field>
+        <Field label="מס׳ בית">
+          <input
+            className={inputCls}
+            inputMode="numeric"
+            value={form.house}
+            onChange={(e) => setForm({ ...form, house: e.target.value })}
+            placeholder="24"
+          />
+        </Field>
+      </div>
       <Field label="טלפון">
         <input
           className={inputCls}
