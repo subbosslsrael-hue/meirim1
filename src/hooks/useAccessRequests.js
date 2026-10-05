@@ -21,11 +21,25 @@ export function pendingRequests(profiles = []) {
 }
 
 // בקשות ממתינות לפי מי שצופה:
-//   • מנכ"ל מאשר רק בנות שירות.
+//   • מנכ"ל מאשר בנות שירות — וכגיבוי גם מדריכים/מתנדבים בסניף שאין בו
+//     בת שירות מאושרת (כדי שלא ייתקעו ללא מאשר).
 //   • בת שירות מאשרת מדריכים/מתנדבים — רק בסניף שלה.
 export function pendingForViewer(profiles = [], viewer) {
   const pend = pendingRequests(profiles)
-  if (viewer?.role === 'admin') return pend.filter((p) => p.role === 'service')
+  if (viewer?.role === 'admin') {
+    // סניפים שיש בהם בת שירות מאושרת (approved !== false = גם undefined).
+    const branchesWithService = new Set(
+      profiles
+        .filter((p) => p.role === 'service' && p.approved !== false)
+        .map((p) => p.branch_id),
+    )
+    return pend.filter(
+      (p) =>
+        p.role === 'service' ||
+        ((p.role === 'volunteer' || p.role === 'instructor') &&
+          !branchesWithService.has(p.branch_id)),
+    )
+  }
   if (viewer?.role === 'service')
     return pend.filter(
       (p) =>
