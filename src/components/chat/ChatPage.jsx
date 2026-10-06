@@ -9,7 +9,9 @@ import {
   Megaphone,
   MessagesSquare,
 } from 'lucide-react'
+import { Lock, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useProfiles } from '../../hooks/useProfiles'
 import { supabase } from '../../lib/supabase'
 
 const PRESET_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏']
@@ -430,19 +432,46 @@ function ChatRoom({ channel, canPost, profile, isAdmin, onRead }) {
 export default function ChatPage({ chatCounts = {}, onRead }) {
   const { profile } = useAuth()
   const [channel, setChannel] = useState('general')
+  // צ'אט פרטי (זמני): מנכ"ל בוחר בת שירות; השיחה בערוץ dm-<serviceId>.
+  const [dmService, setDmService] = useState(null)
   const isAdmin = profile?.role === 'admin'
-  const isAdminOrService = isAdmin || profile?.role === 'service'
-  const canPost = channel === 'general' || isAdminOrService
+  const isService = profile?.role === 'service'
+  const isAdminOrService = isAdmin || isService
   const counts = chatCounts
+
+  // רשימת בנות שירות — למנכ"ל בלבד, לבחירת צ'אט פרטי.
+  const { data: profiles } = useProfiles({ enabled: isAdmin })
+  const serviceWorkers = profiles.filter((p) => p.role === 'service')
 
   const TABS = [
     { id: 'general', label: 'כללי', icon: MessagesSquare },
     { id: 'announcements', label: 'הודעות חשובות', icon: Megaphone },
+    // טאב פרטי — למנכ"ל ולבנות שירות בלבד (צ'אט זמני).
+    ...(isAdminOrService
+      ? [
+          {
+            id: 'private',
+            label: isAdmin ? 'צ׳אטים פרטיים' : 'צ׳אט עם המנכ״ל',
+            icon: Lock,
+          },
+        ]
+      : []),
   ]
+
+  // ערוץ בפועל: בטאב הפרטי — בת שירות מדברת בערוץ שלה; מנכ"ל בערוץ של הנבחרת.
+  const privateChannel = isService
+    ? `dm-${profile.id}`
+    : dmService
+      ? `dm-${dmService.id}`
+      : null
+
+  const activeChannel = channel === 'private' ? privateChannel : channel
+  const canPost =
+    channel === 'private' ? !!activeChannel : channel === 'general' || isAdminOrService
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {TABS.map((t) => {
           const Icon = t.icon
           const active = channel === t.id
@@ -450,7 +479,10 @@ export default function ChatPage({ chatCounts = {}, onRead }) {
           return (
             <button
               key={t.id}
-              onClick={() => setChannel(t.id)}
+              onClick={() => {
+                setChannel(t.id)
+                if (t.id === 'private') setDmService(null)
+              }}
               className={`relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${
                 active
                   ? 'bg-amber-500 text-white shadow'
@@ -469,14 +501,61 @@ export default function ChatPage({ chatCounts = {}, onRead }) {
         })}
       </div>
 
-      <ChatRoom
-        key={channel}
-        channel={channel}
-        canPost={canPost}
-        profile={profile}
-        isAdmin={isAdmin}
-        onRead={onRead}
-      />
+      {channel === 'private' && isAdmin && !dmService ? (
+        // מנכ"ל: בחירת בת שירות לצ'אט פרטי
+        <div className="bg-white border border-stone-200 rounded-2xl p-3">
+          <p className="text-sm text-stone-500 mb-2 flex items-center gap-1.5">
+            <Lock size={14} className="text-amber-500" /> בחר/י בת שירות לשיחה
+            פרטית:
+          </p>
+          {serviceWorkers.length === 0 ? (
+            <p className="text-sm text-stone-400 py-3 text-center">
+              אין בנות שירות במערכת.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {serviceWorkers.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setDmService(s)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-100 text-right"
+                >
+                  <span className="font-semibold text-stone-700 text-sm">
+                    {s.name}
+                    {s.branch?.name ? (
+                      <span className="text-xs font-normal text-stone-400">
+                        {' · '}
+                        {s.branch.name}
+                      </span>
+                    ) : null}
+                  </span>
+                  <ChevronRight size={16} className="text-stone-400" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {channel === 'private' && isAdmin && dmService && (
+            <button
+              onClick={() => setDmService(null)}
+              className="flex items-center gap-1 text-sm font-semibold text-amber-700 hover:text-amber-800"
+            >
+              <ChevronRight size={16} /> חזרה לרשימת בנות השירות ·{' '}
+              <span className="text-stone-600">{dmService.name}</span>
+            </button>
+          )}
+          <ChatRoom
+            key={activeChannel}
+            channel={activeChannel}
+            canPost={canPost}
+            profile={profile}
+            isAdmin={isAdmin}
+            onRead={onRead}
+          />
+        </>
+      )}
     </div>
   )
 }

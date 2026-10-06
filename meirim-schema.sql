@@ -763,13 +763,26 @@ ALTER TABLE activity_reads    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_archives ENABLE ROW LEVEL SECURITY;
 
 -- צ׳אט כללי: כולם קוראים; פרסום ב"general" לכולם, ב"announcements" רק admin/service.
+-- ערוצי dm-* (צ'אט פרטי בת שירות↔מנכ"ל) נראים/נכתבים רק למנכ"ל ולבעלת הערוץ.
 CREATE POLICY "chat read all" ON chat_messages
-  FOR SELECT TO authenticated USING (TRUE);
+  FOR SELECT TO authenticated
+  USING (
+    channel NOT LIKE 'dm-%'
+    OR current_user_role() = 'admin'
+    OR channel = 'dm-' || auth.uid()::text
+  );
 CREATE POLICY "chat insert" ON chat_messages
   FOR INSERT TO authenticated
   WITH CHECK (
     profile_id = auth.uid()
-    AND (channel = 'general' OR current_user_role() IN ('admin', 'service'))
+    AND (
+      channel = 'general'
+      OR (channel = 'announcements' AND current_user_role() IN ('admin', 'service'))
+      OR (
+        channel LIKE 'dm-%'
+        AND (current_user_role() = 'admin' OR channel = 'dm-' || auth.uid()::text)
+      )
+    )
   );
 CREATE POLICY "chat edit own" ON chat_messages
   FOR UPDATE TO authenticated
