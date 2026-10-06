@@ -4,6 +4,13 @@
 -- Tightens the chat read/insert policies so dm-* channels are visible/writable
 -- only to the admin and to the service worker who owns that channel. Regular
 -- channels (general / announcements) keep their previous behavior.
+
+-- The channel CHECK constraint only allowed general/announcements; widen it to
+-- also permit dm-* channels (otherwise inserts fail with chat_messages_channel_check).
+ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_channel_check;
+ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_channel_check
+  CHECK (channel IN ('general', 'announcements') OR channel LIKE 'dm-%');
+
 DROP POLICY IF EXISTS "chat read all" ON chat_messages;
 CREATE POLICY "chat read all" ON chat_messages
   FOR SELECT TO authenticated
