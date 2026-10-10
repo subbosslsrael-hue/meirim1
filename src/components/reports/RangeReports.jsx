@@ -13,12 +13,6 @@ import Card from '../shared/Card'
 import { PIE_COLORS } from '../../lib/constants'
 import { todayKey } from '../../lib/week'
 
-const skillTokens = (s) =>
-  String(s || '')
-    .split(/[,،]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-
 // תאריך לפני N ימים כ-YYYY-MM-DD
 const daysAgo = (n) => {
   const d = new Date()
@@ -62,28 +56,24 @@ export default function RangeReports({
     return { rows, total }
   }, [reports, profiles, from, to])
 
-  // --- פעילויות לפי קטגוריה (מיומנות) בטווח ---
+  // --- פעילויות לפי קטגוריה (פרויקט — נקודות אור וכו') בטווח ---
   const categories = useMemo(() => {
     // איחוד פעילויות פעילות + פעילויות שהושלמו (ארכיון), לפי activity_date בטווח.
     const all = [
       ...activities.map((a) => ({
         date: a.activity_date,
-        skills: a.required_skills,
+        project: a.project,
       })),
       ...actArchives.map((a) => ({
         date: a.activity_date,
-        skills: a.required_skills,
+        project: a.project,
       })),
     ].filter((a) => a.date && a.date >= from && a.date <= to)
 
     const counts = {}
     all.forEach((a) => {
-      const toks = skillTokens(a.skills)
-      if (!toks.length) {
-        counts['ללא קטגוריה'] = (counts['ללא קטגוריה'] || 0) + 1
-      } else {
-        toks.forEach((t) => (counts[t] = (counts[t] || 0) + 1))
-      }
+      const key = (a.project || '').trim() || 'ללא קטגוריה'
+      counts[key] = (counts[key] || 0) + 1
     })
     const data = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
