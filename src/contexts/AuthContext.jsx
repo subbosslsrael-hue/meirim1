@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -21,6 +22,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
   const [recovery, setRecovery] = useState(false)
+  // מזהה המשתמש האחרון שנטען — כדי לא לטעון פרופיל מחדש ברענון טוקן/חזרה ללשונית.
+  const lastUserId = useRef(null)
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
@@ -76,6 +79,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return
       setSession(data.session)
+      lastUserId.current = data.session?.user?.id || null
       if (data.session?.user) {
         fetchProfile(data.session.user.id).finally(() => setLoading(false))
       } else {
@@ -87,8 +91,14 @@ export function AuthProvider({ children }) {
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(newSession)
-      if (newSession?.user) {
-        fetchProfile(newSession.user.id)
+      const nextId = newSession?.user?.id || null
+      // טוענים מחדש את הפרופיל רק כשהמשתמש *באמת* משתנה (כניסה/יציאה) —
+      // לא בעת רענון טוקן/חזרה ללשונית (אותו משתמש), כדי לא להרוס ולבנות
+      // מחדש את האפליקציה ולאבד את המסך/טאב שבו המשתמש נמצא.
+      if (nextId === lastUserId.current) return
+      lastUserId.current = nextId
+      if (nextId) {
+        fetchProfile(nextId)
       } else {
         setProfile(null)
       }

@@ -74,7 +74,21 @@ function needsRoleSetup(profile) {
 }
 
 function AppShell() {
-  const [tab, setTab] = useState('dashboard')
+  // שומרים את הטאב הנבחר כדי לחזור אליו (לא ללוח הבקרה) בחזרה ללשונית/רענון.
+  const [tab, setTab] = useState(() => {
+    try {
+      return localStorage.getItem('meirim_tab') || 'dashboard'
+    } catch {
+      return 'dashboard'
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('meirim_tab', tab)
+    } catch {
+      /* localStorage לא זמין — מתעלמים */
+    }
+  }, [tab])
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const isService = profile?.role === 'service'
