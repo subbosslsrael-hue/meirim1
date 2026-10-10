@@ -26,7 +26,7 @@ export function todayKey() {
 
 // המרת מפתח 'YYYY-MM-DD' לאובייקט Date מקומי.
 function parseKey(key) {
-  const [y, m, d] = key.split('-').map(Number)
+  const [y, m, d] = String(key || '').split('-').map(Number)
   return new Date(y, m - 1, d)
 }
 
@@ -42,8 +42,12 @@ export function weekRange(key) {
 }
 
 // תווית קריאה לטווח השבוע, למשל "23.8 – 29.8.2026".
+// עמיד למפתח פגום/לא תקין: מחזיר את הערך הגולמי במקום "NaN" (מונע שורות NaN
+// בדיווחים כשקיים דיווח ישן עם פורמט שבוע שונה).
 export function formatWeekRange(key) {
   const { start, end } = weekRange(key)
+  if (!start || isNaN(start.getTime()) || isNaN(end.getTime()))
+    return key || ''
   const dm = (x) => `${x.getDate()}.${x.getMonth() + 1}`
   return `${dm(start)} – ${dm(end)}.${end.getFullYear()}`
 }
