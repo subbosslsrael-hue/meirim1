@@ -5,7 +5,6 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 import * as XLSX from 'xlsx'
@@ -224,9 +223,7 @@ export default function RangeReports({
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={85}
-                    label={(e) => e.name}
-                    labelLine={false}
+                    outerRadius={90}
                   >
                     {categories.data.map((_, i) => (
                       <Cell
@@ -236,7 +233,6 @@ export default function RangeReports({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
