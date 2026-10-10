@@ -341,10 +341,12 @@ CREATE POLICY "families service same branch"
   ON families FOR ALL TO authenticated
   USING (current_user_role() = 'service' AND branch_id = current_user_branch())
   WITH CHECK (current_user_role() = 'service' AND branch_id = current_user_branch());
+-- קריאת משפחות שמופיעות בחלוקה — למתנדב/מדריך וגם לבת שירות (כדי שתראה את
+-- כל נקודות החלוקה במפה, גם משפחות שאינן בסניף שלה).
 CREATE POLICY "families read for distribution claimers"
   ON families FOR SELECT TO authenticated
   USING (
-    (current_user_role() = 'volunteer' OR current_user_role() = 'instructor')
+    current_user_role() IN ('volunteer', 'instructor', 'service')
     AND family_in_any_distribution(id)
   );
 
