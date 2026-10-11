@@ -141,10 +141,12 @@ export default function DistributionPage() {
 
   const canClaimRole = !!profile?.id
 
-  // לבת שירות: מדגישים את היעדים ששייכים למשפחות בסניף שלה (היא רואה את כולם,
-  // אבל שלה בולטים). לשאר התפקידים אין הדגשה (null).
+  // לבת שירות ולמתנדב: מדגישים את היעדים ששייכים למשפחות בסניף שלהם (הם רואים
+  // את כולם, אבל של הסניף שלהם בולטים). למנכ"ל ולמדריך אין הדגשה (null).
   const highlightBranchId =
-    profile?.role === 'service' ? profile?.branch_id || null : null
+    profile?.role === 'service' || profile?.role === 'volunteer'
+      ? profile?.branch_id || null
+      : null
   const myBranchStops = highlightBranchId
     ? (dist.stops || []).filter((s) => s.family?.branch_id === highlightBranchId)
         .length
