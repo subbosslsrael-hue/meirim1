@@ -19,18 +19,25 @@ L.Icon.Default.mergeOptions({
 })
 
 // שלושה מצבים: נמסר (ירוק) · נלקח/בדרך (כחול) · ממתין ולא נלקח (כתום)
-function makeIcon(idx, { delivered, claimed }) {
+// mine=יעד בסניף של הצופה (בת שירות) — מודגש בטבעת זהב ובגודל מעט גדול יותר.
+function makeIcon(idx, { delivered, claimed, mine }) {
   const bg = delivered ? '#2E8B6F' : claimed ? '#0284C7' : '#D9651A'
+  const size = mine ? 34 : 28
+  const anchor = size / 2
+  const border = mine ? '3px solid #F59E0B' : '2px solid white'
+  const shadow = mine
+    ? '0 0 0 3px rgba(245,158,11,.45), 0 2px 5px rgba(0,0,0,.3)'
+    : '0 2px 4px rgba(0,0,0,.25)'
   return L.divIcon({
     className: '',
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [size, size],
+    iconAnchor: [anchor, anchor],
     html: `<div style="
-      width:28px;height:28px;border-radius:50%;
+      width:${size}px;height:${size}px;border-radius:50%;
       background:${bg};color:white;
       display:flex;align-items:center;justify-content:center;
-      font-weight:700;font-size:12px;font-family:Assistant,sans-serif;
-      border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,.25);
+      font-weight:700;font-size:${mine ? 13 : 12}px;font-family:Assistant,sans-serif;
+      border:${border};box-shadow:${shadow};
     ">${idx}</div>`,
   })
 }
@@ -51,7 +58,7 @@ function FitBounds({ points }) {
 
 const SOUTH_ISRAEL_CENTER = [31.4, 34.6]
 
-export default function DistributionMap({ orderedStops }) {
+export default function DistributionMap({ orderedStops, highlightBranchId }) {
   const points = useMemo(
     () =>
       orderedStops
@@ -85,14 +92,16 @@ export default function DistributionMap({ orderedStops }) {
           .filter((s) => s.family?.lat != null && s.family?.lng != null)
           .map((s, idx) => {
             const claimed = !!s.claimed_by
+            const mine =
+              !!highlightBranchId && s.family?.branch_id === highlightBranchId
             // המצב נכלל ב-key כדי לאלץ את react-leaflet לרענן את הסיכה
             // בעת לקיחה/ביטול/מסירה (עדכון prop של icon לבדו לא תמיד תופס).
-            const state = s.delivered ? 'd' : claimed ? 'c' : 'w'
+            const state = `${s.delivered ? 'd' : claimed ? 'c' : 'w'}${mine ? 'm' : ''}`
             return (
               <Marker
                 key={`${s.id}-${state}`}
                 position={[s.family.lat, s.family.lng]}
-                icon={makeIcon(idx + 1, { delivered: s.delivered, claimed })}
+                icon={makeIcon(idx + 1, { delivered: s.delivered, claimed, mine })}
               >
                 <Popup>
                   <div className="text-sm">

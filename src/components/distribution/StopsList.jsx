@@ -15,6 +15,7 @@ function StopRow({
   stop,
   index,
   currentProfile,
+  mine,
   onClaim,
   onMarkDelivered,
   onPhotoUploaded,
@@ -71,13 +72,24 @@ function StopRow({
   const canModify = isAdminOrService || claimedByMe
 
   return (
-    <div className="flex items-center gap-3 p-2.5 rounded-xl border border-stone-100 bg-stone-50/60">
+    <div
+      className={`flex items-center gap-3 p-2.5 rounded-xl border ${
+        mine
+          ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-300'
+          : 'border-stone-100 bg-stone-50/60'
+      }`}
+    >
       <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
         {index + 1}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-stone-800 text-sm truncate">
+        <div className="font-semibold text-stone-800 text-sm truncate flex items-center gap-1.5">
           {f.name}
+          {mine && (
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-1.5 py-0.5 shrink-0">
+              הסניף שלי
+            </span>
+          )}
         </div>
         <div className="text-xs text-stone-500 truncate">
           {f.city}, {f.address}
@@ -247,6 +259,7 @@ function StopRow({
 export default function StopsList({
   orderedStops,
   currentProfile,
+  highlightBranchId,
   onClaim,
   onMarkDelivered,
   onPhotoUploaded,
@@ -266,6 +279,9 @@ export default function StopsList({
           stop={s}
           index={idx}
           currentProfile={currentProfile}
+          mine={
+            !!highlightBranchId && s.family?.branch_id === highlightBranchId
+          }
           onClaim={onClaim}
           onMarkDelivered={onMarkDelivered}
           onPhotoUploaded={onPhotoUploaded}

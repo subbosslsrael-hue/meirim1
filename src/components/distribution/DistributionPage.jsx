@@ -141,6 +141,15 @@ export default function DistributionPage() {
 
   const canClaimRole = !!profile?.id
 
+  // לבת שירות: מדגישים את היעדים ששייכים למשפחות בסניף שלה (היא רואה את כולם,
+  // אבל שלה בולטים). לשאר התפקידים אין הדגשה (null).
+  const highlightBranchId =
+    profile?.role === 'service' ? profile?.branch_id || null : null
+  const myBranchStops = highlightBranchId
+    ? (dist.stops || []).filter((s) => s.family?.branch_id === highlightBranchId)
+        .length
+    : 0
+
   const myStops = (dist.stops || []).filter(
     (s) =>
       s.claimed_by === profile?.id &&
@@ -361,7 +370,10 @@ export default function DistributionPage() {
               מפת חלוקה ומסלול מותאם (GIS אמיתי)
             </h3>
           </div>
-          <DistributionMap orderedStops={ordered} />
+          <DistributionMap
+            orderedStops={ordered}
+            highlightBranchId={highlightBranchId}
+          />
           <div className="flex gap-4 mt-2 text-[11px] text-stone-500 flex-wrap">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />{' '}
@@ -375,6 +387,12 @@ export default function DistributionPage() {
               <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />{' '}
               ממתין
             </span>
+            {highlightBranchId && (
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full bg-white border-2 border-amber-500 ring-2 ring-amber-300 inline-block" />{' '}
+                הסניף שלי ({myBranchStops})
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Route size={12} /> מסלול מחושב לפי השכן הקרוב
             </span>
@@ -399,6 +417,7 @@ export default function DistributionPage() {
           <StopsList
             orderedStops={ordered}
             currentProfile={profile}
+            highlightBranchId={highlightBranchId}
             onClaim={claimStop}
             onMarkDelivered={markDelivered}
             onPhotoUploaded={photoUploaded}
