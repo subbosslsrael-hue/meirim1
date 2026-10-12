@@ -128,13 +128,19 @@ export default function ReportsPage() {
             ? -1
             : 1,
       )
-    const weeks = [...new Set(reports.data.map((r) => r.week))].sort((a, b) =>
+    // סופרים רק דיווחים של המדווחים שמופיעים בטבלה (בת שירות/מדריך פעילים).
+    // דיווחים "יתומים" — של מתנדב, של מי שתפקידו השתנה, או של משתמש שנמחק
+    // (profile_id שלא תואם עמודה) — לא נספרים, אחרת סכום ה"סה״כ" לא יתאים
+    // לסכום התאים המוצגים בעמודה.
+    const reporterIds = new Set(reporters.map((p) => p.id))
+    const counted = reports.data.filter((r) => reporterIds.has(r.profile_id))
+    const weeks = [...new Set(counted.map((r) => r.week))].sort((a, b) =>
       a < b ? 1 : -1,
     )
     const cell = {}
     const colTotal = {}
     let grand = 0
-    reports.data.forEach((r) => {
+    counted.forEach((r) => {
       const h = Number(r.hours || 0)
       cell[`${r.profile_id}|${r.week}`] =
         (cell[`${r.profile_id}|${r.week}`] || 0) + h
